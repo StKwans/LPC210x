@@ -28,11 +28,10 @@ protected:
   uint32_t bufOverflow;
 public:
   Circular(uint32_t LN, char* Lbuf):N(LN),buf(Lbuf),head(0),mid(0),tail(0),fullState(false),bufOverflow(0) {}
-
-  //Is there no space to write another char?
-  bool isFull();
+  //Is there no space to write another char?  
+  bool isFull() {return fullState || ((head+1)%N==tail);};
   //Is there at least one char ready to be read?
-  bool isEmpty();
+  bool isEmpty() {return head==tail;};
   //Add a char to the buffer, not ready to be flushed yet
   bool fill(char in);
 
@@ -59,7 +58,8 @@ public:
 
 
   //Mark all current unready data as ready
-  void mark();
+  void mark() {mid=head;};
+
   //Get the next character ready to be flushed
   char get();
   //Get all ready data from one buffer and copy it to another (as ready also)

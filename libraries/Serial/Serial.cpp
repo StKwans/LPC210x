@@ -24,24 +24,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include "LPC214x.h"
 
 #include "Serial.h"
 #include "Time.h"
 #include "gpio.h"
 
-//Actual hardware interaction
-
-static inline int putc_serial(int port,int ch) {
-  while (!(ULSR(port) & 0x20));
-  return (UTHR(port) = ch);
-}
-
-// Constructors ////////////////////////////////////////////////////////////////
-
-HardwareSerial::HardwareSerial(int Lport):port(Lport) {
-
-}
 
 // Public Methods //////////////////////////////////////////////////////////////
 
@@ -102,25 +89,10 @@ void HardwareSerial::end() {
   }
 }
 
-int HardwareSerial::available(void) {
-  return 0;
-}
-
-int HardwareSerial::peek(void) {
-  return -1;
-}
-
-int HardwareSerial::read(void) {
-  return -1;
-}
-
-void HardwareSerial::flush() {
+void HardwareSerial::listen(void) {
 
 }
 
-void HardwareSerial::write(uint8_t c) {
-  putc_serial(port,c);
-}
 
 // Preinstantiate Objects //////////////////////////////////////////////////////
 

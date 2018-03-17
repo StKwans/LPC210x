@@ -24,14 +24,24 @@
 
 #include <inttypes.h>
 #include "Stream.h"
+#include "LPC214x.h"
+
+#ifdef SERIAL_IRQ
+#include "Circular.h"
+#endif
 
 class HardwareSerial: public Stream {
   private:
+#ifdef SERIAL_IRQ
+    char rxbuf[128];
+    Circular rx(rxbuf,128);
+#endif
   public:
     unsigned int port;
-    HardwareSerial(int port);
+    HardwareSerial(int Lport):port(Lport) {};
     void begin(unsigned int baud);
     void end();
+    void listen();
     virtual int available(void);
     virtual int peek(void);
     virtual int read(void);
@@ -39,6 +49,29 @@ class HardwareSerial: public Stream {
     virtual void write(uint8_t);
     using Print::write; // pull in write(str) and write(buf, size) from Print
 };
+
+inline int HardwareSerial::available(void) {
+  return ((ULSR(port) & 0x01)>0)?1:0;
+}
+
+inline int HardwareSerial::read(void) {
+  if(available()) return URBR(port);
+  return -1;
+}
+
+inline void HardwareSerial::flush(void) {
+  UFCR(port)|=0x07;
+}
+
+inline void HardwareSerial::write(uint8_t c) {
+  while (!(ULSR(port) & 0x20));
+  UTHR(port) = c;
+}
+
+inline int HardwareSerial::peek(void) {
+  return -1;
+}
+
 
 extern HardwareSerial Serial;
 extern HardwareSerial Serial1;

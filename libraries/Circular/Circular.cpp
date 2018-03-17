@@ -1,13 +1,5 @@
 #include "Circular.h"
 
-bool Circular::isFull() {
-  return fullState || ((head+1)%N==tail);
-}
-
-bool Circular::isEmpty() {
-  return head==tail;
-}
-
 //returns true if character written, false 
 //if character could not be written
 bool Circular::fill(char in) {
@@ -79,10 +71,6 @@ void Circular::pokeTail(int pos, char poke) {
   pos+=tail;
   pos%=N;
   buf[pos]=poke;
-}
-
-void Circular::mark() {
-  mid=head;
 }
 
 int Circular::unreadylen() {
