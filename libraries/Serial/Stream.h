@@ -17,6 +17,10 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/*This is a purely abstract class, so an Interface in Java terms. We use this
+  primarily to add input support to the Print class, which provides all the 
+  output support.  */
+
 #ifndef Stream_h
 #define Stream_h
 
@@ -26,9 +30,9 @@
 class Stream : public Print {
   public:
     virtual int available() = 0; ///<Gets the number of bytes available in the stream. This is only for bytes that have already arrived. 
-    virtual int read() = 0;      
+    virtual int read() = 0;      ///<Read a byte from the stream and advance to the next one
     virtual int peek() = 0;      ///<Read a byte from the file without advancing to the next one. That is, successive calls to peek() will return the same value, as will the next call to read(). 
-    virtual void flush() = 0;
+    virtual void flush() = 0;    ///<Flush the input buffer - equivalent to calling read() until available()==0, and discarding the bytes.
 };
 
 #endif

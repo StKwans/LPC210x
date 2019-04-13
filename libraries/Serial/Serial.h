@@ -26,6 +26,8 @@
 #include "Stream.h"
 #include "LPC214x.h"
 
+//#define SERIAL_IRQ
+
 #ifdef SERIAL_IRQ
 #include "Circular.h"
 #endif
@@ -34,11 +36,17 @@ class HardwareSerial: public Stream {
   private:
 #ifdef SERIAL_IRQ
     char rxbuf[128];
-    Circular rx(rxbuf,128);
+    Circular rx;
+    friend void uart0_isr();
+    friend void uart1_isr();
 #endif
   public:
     unsigned int port;
-    HardwareSerial(int Lport):port(Lport) {};
+    HardwareSerial(int Lport):
+#ifdef SERIAL_IRQ
+      rx(sizeof(rxbuf),rxbuf),
+#endif
+      port(Lport) {};
     void begin(unsigned int baud);
     void end();
     void listen();
@@ -51,16 +59,33 @@ class HardwareSerial: public Stream {
 };
 
 inline int HardwareSerial::available(void) {
-  return ((ULSR(port) & 0x01)>0)?1:0;
+#ifdef SERIAL_IRQ
+  int result=rx.readylen();
+#else
+  int result=((ULSR(port) & 0x01)>0)?1:0;
+#endif
+//  print("A: ");
+//  println(result);
+  return result;
 }
 
 inline int HardwareSerial::read(void) {
-  if(available()) return URBR(port);
-  return -1;
+  if(available()>0) {
+#ifdef SERIAL_IRQ
+    return rx.get();
+#else
+    return URBR(port);
+#endif
+  } else {
+    return -1;
+  }
 }
 
 inline void HardwareSerial::flush(void) {
   UFCR(port)|=0x07;
+#ifdef SERIAL_IRQ
+  rx.empty();
+#endif
 }
 
 inline void HardwareSerial::write(uint8_t c) {
@@ -69,11 +94,17 @@ inline void HardwareSerial::write(uint8_t c) {
 }
 
 inline int HardwareSerial::peek(void) {
+#ifdef SERIAL_IRQ
+  return rx.peekTail();
+#else
+  //Peek not supported for a pure hardware read
   return -1;
+#endif
 }
 
 
 extern HardwareSerial Serial;
 extern HardwareSerial Serial1;
+extern int testInit;
 
 #endif

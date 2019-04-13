@@ -29,6 +29,39 @@
 #include "Time.h"
 #include "gpio.h"
 
+#ifdef SERIAL_IRQ
+#include "vic.h"
+void uart0_isr(void) {
+  //We have to read the interrupt identification register
+  //to acknowledge and clear the interrupt
+  int iir=UIIR(0); 
+  //Now that we have read it, we don't care what the actual reason is, because
+  //we only know how to handle read events
+  if(((iir & 0x0F)==0x0C) || ((iir & 0x0F)==0x04)) {
+    //handle the read event
+    int charcount=0;
+    while((ULSR(0) & 1)>0) {
+      charcount++;
+      Serial.rx.fill(URBR(0));
+    }
+  }
+  Serial.rx.mark();
+}
+
+void uart1_isr(void) {
+  //We have to read the interrupt identification register
+  //to acknowledge and clear the interrupt
+  int iir=UIIR(1);
+//  if(iir & 0x03<<1) {
+    //handle the read event
+    while((ULSR(1) & 1)>0) {
+      Serial1.rx.fill(URBR(1));
+    }
+//  }
+}
+#endif
+
+
 
 // Public Methods //////////////////////////////////////////////////////////////
 
@@ -52,7 +85,7 @@ void HardwareSerial::begin(unsigned int baud) {
   //       of the FIFOs. In other words, set the DLAB to change the baud
   //       rate, and clear it to use the FIFOs.
 
-  unsigned int Denom=PCLK/baud;
+  unsigned int Denom=Time::PCLK/baud;
   unsigned int UDL=Denom/16;
 
   UDLM(port)=(UDL >> 8) & 0xFF;
@@ -61,17 +94,6 @@ void HardwareSerial::begin(unsigned int baud) {
   UFCR(port) = 0xC7; //Enable and clear both FIFOs, Rx trigger level=14 chars
   ULCR(port) = 0x03; //Turn of DLAB - FIFOs accessable
   UIER(port)=0;
-
-/*
-   enableIRQ();
-  if(port==0) {
-    install_irq(UART0_INT,uart0_isr);
-    U0IER=0x03; //Rx ready, Tx empty, not line status, not autobaud ints
-  } else {
-    install_irq(UART1_INT,uart1_isr);
-    U1IER=0x03; //Rx ready, Tx empty, not line status, not autobaud ints
-  }
- */
 }
 
 void HardwareSerial::end() {
@@ -87,15 +109,26 @@ void HardwareSerial::end() {
     gpio_set_read(8);
     gpio_set_read(9);
   }
+#ifdef SERIAL_IRQ
+  VIC.uninstall(VICDriver::UART0+port);
+  UIER(port)=0x00; //Rx ready, not Tx empty, not line status, not autobaud ints
+#endif
 }
 
 void HardwareSerial::listen(void) {
-
+#ifdef SERIAL_IRQ
+  VIC.install(VICDriver::UART0+port,port==0?uart0_isr:uart1_isr);
+  UIER(port)=0x01; //Rx ready, not Tx empty, not line status, not autobaud ints
+#endif
 }
-
 
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
 HardwareSerial Serial(0);
 HardwareSerial Serial1(1);
+
+volatile int f() {
+  return 0x12345678;
+}
+int testInit=f();
 
