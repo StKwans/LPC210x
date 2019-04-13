@@ -5,4 +5,5 @@
 *.lst
 .dep/
 *.o64
+putty*.log
 
