@@ -53,8 +53,9 @@ BMP180 bmp180(Wire1);
 HMC5883 hmc5883(Wire1);
 MPU6050 mpu6050(Wire1,0);
 AD799x ad799x(Wire1);
-const int dumpPktSize=120;
-Base85 d(Serial,dumpPktSize);
+//const int dumpPktSize=120;
+//Base85 d(Serial,dumpPktSize);
+//IntelHex d(Serial);
 FileCircular pktStore(f);
 CCSDS ccsds(pktStore);
 unsigned short pktseq[32];
@@ -219,7 +220,7 @@ void collectData(void* stuff) {
 
 void setup() {
   set_light(1,1);
-  Serial.begin(230400);
+  Serial.begin(9600);
   Serial.println(version_string);
   Wire1.begin();
 
@@ -249,9 +250,9 @@ void setup() {
   //Dump code to serial port and packet file
   int len=source_end-source_start;
   char* base=source_start;
-  d.begin();
+//  d.begin();
   while(len>0) {
-    d.line(base,0,len>dumpPktSize?dumpPktSize:len);
+//    d.line(base,0,len>dumpPktSize?dumpPktSize:len);
     ccsds.start(0x03,pktseq);
     ccsds.fill16(base-source_start);
     ccsds.fill(base,len>dumpPktSize?dumpPktSize:len);
@@ -261,7 +262,7 @@ void setup() {
     base+=dumpPktSize;
     len-=dumpPktSize;
   }
-  d.end();
+//  d.end();
 
   ccsds.start(0x12,pktseq);
   sdinfo.fill(ccsds);
