@@ -1,11 +1,26 @@
 # List C++ source files here.
 # use file-extension cpp for C++-files (use extension .cpp)
-# Every Loginator sketch uses its own main.cpp, so we reference it here.
-CPPSRC += main.cpp
+#Used by everything, but doesn't need to be first. Section definitions are
 CPPSRC += ../libraries/System/Startup.cpp
 CPPSRC += ../libraries/System/hardware_stack.cpp
-CPPSRC += ../libraries/System/Time.cpp
-CPPSRC += ../libraries/System/irq.cpp
+# Every Loginator sketch uses its own main.cpp, so we reference it here. Link it last so that it can use all
+# staticaly declared, dynamically initialized objects.
+CPPSRC += main.cpp
+
+#INIT_CPPSRC - Solution to "static initialization fiasco". Initialization (especially dynamic initialization)
+#is ordered in one translation unit and in an unspecified order between translation units, but our linker script
+#specifies that dinamic initialization code for each translation unit is called in order that the translation
+#units are specified in the linker command line. These routines will be linked first, so that any constructors
+#in any translation unit can use these secure in the knowledge that they are already initialized. All other
+#initializers are ultimately determined by the Makefile for each library and the order that the library Makefiles
+#are included in the top-level program Makefile. Only include things in here that actually need to be initialized
+#before anything else.
+
+#Set up VIC first to catch any spurious interrupts.
+INIT_CPPSRC  = ../libraries/System/vic.cpp
+#Timer doesn't depend on VIC, but just in case, we do VIC first. Function delay() depends on PCLK being set right.
+#Since delay() is pretty low-level, we want it available to other constructors, but VIC construction doesn't use it.
+INIT_CPPSRC += ../libraries/System/Time.cpp
 
 LIBMAKE+=Makefile ../libraries/System/Makefile
 
@@ -18,7 +33,6 @@ endif
 
 ABI = arm-none-eabi
 LD_SCRIPT = ../libraries/System/lowmem_cpp_eabi.ld
-ZPAQDIR=../libraries/System
 
 reduce = $(if $(strip $2),$(call reduce,$1,$(wordlist 2,$(words $2),$2),$(call $1,$(firstword $2),$3)),$3)
 
@@ -31,19 +45,17 @@ reduce = $(if $(strip $2),$(call reduce,$1,$(wordlist 2,$(words $2),$2),$(call $
 check_uniq = $(if $(filter $1,$2),$2,$2 $1)
 
 uniq = $(call reduce,check_uniq,$1)
-
 SRC:=$(call uniq,$(SRC))
 SRCARM:=$(call uniq,$(SRCARM))
 CPPSRC:=$(call uniq,$(CPPSRC))
 CPPSRCARM:=$(call uniq,$(CPPSRCARM))
 ASRC:=$(call uniq,$(ASRC))
 ASRCARM:=$(call uniq,$(ASRCARM))
+INIT_CPPSRC:=$(call uniq,$(INIT_CPPSRC))
 LIBMAKE:=$(call uniq,$(LIBMAKE))
-ALLSRC = $(SRC) $(SRCARM) $(CPPSRC) $(CPPSRCARM) $(ASRC) $(ASRCARM)
+EXTRAOBJ:=$(call uniq,$(EXTRAOBJ))
+ALLSRC = $(INIT_CPPSRC) $(SRC) $(SRCARM) $(CPPSRC) $(CPPSRCARM) $(ASRC) $(ASRCARM)
 INCDEF = $(shell cat .dep/* | sed -n 's/\([^:]*.h\)\s*:/\1/gp' | sort | uniq)
-ALLTAR = $(ALLSRC) $(INCDEF) $(LD_SCRIPT) $(LIBMAKE) ../libraries/System/Doxyfile.template $(EAGLE) $(ZPAQDIR)/max.cfg
-BACKUP = $(addsuffix ~,$(ALLTAR))
-#MYTAR = $(shell cat $(ALLTAR) | sed -n 's"\.\./lib/\S*\s//g"')
 
 FLASH_TOOL = LPC12
 #FLASH_TOOL = UVISION
@@ -74,7 +86,7 @@ THUMB_IW = -mthumb-interwork
 # Optimization level, can be [0, 1, 2, 3, s]. 
 # 0 = turn off optimization. s = optimize for size.
 # (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
-OPT = -O3 -fomit-frame-pointer
+OPT = -Og -fomit-frame-pointer
 
 ## Using the Atmel AT91_lib produces warning with
 ## the default warning-levels. 
@@ -121,7 +133,7 @@ CFLAGS += $(OPT)
 CFLAGS += -Wall -Wcast-align
 CFLAGS += -Wpointer-arith -Wswitch
 CFLAGS += -Wredundant-decls -Wreturn-type -Wshadow -Wunused -Wno-attributes
-CFLAGS += -Wa,-adhlns=$(subst $(suffix $<),.lst,$<) 
+CFLAGS += -Wa,-adhlns=$(subst $(suffix $<),.lst,$<)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += -ffunction-sections -fdata-sections
 CFLAGS += -fsingle-precision-constant -mfloat-abi=soft
@@ -139,7 +151,7 @@ CONLYFLAGS += -Wmissing-declarations
 endif
 
 # flags only for C++ (arm-elf-g++)
-CPPFLAGS = -fno-rtti -fno-exceptions -fno-unwind-tables -std=c++11
+CPPFLAGS = -fno-rtti -fno-exceptions -fno-unwind-tables -std=c++17
 
 # Assembler flags.
 #  -Wa,...:    tell GCC to pass this to the assembler.
@@ -169,16 +181,15 @@ MATH_LIB = -lm
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -nostartfiles -Wl,-Map,$(TARGET).map,--cref,--gc-sections,--demangle
+LDFLAGS = -nostartfiles -Wl,-Map,$(TARGET).map,--cref,--gc-sections,--demangle,-t
 LDFLAGS += -lc
 LDFLAGS += $(NEWLIBLPC) $(MATH_LIB)
-#LDFLAGS += -lgcc 
+#LDFLAGS += -lgcc
 LDFLAGS += $(CPLUSPLUS_LIB)
 LDFLAGS += $(patsubst %,-L%,$(EXTRA_LIBDIRS))
 LDFLAGS += $(patsubst %,-l%,$(EXTRA_LIBS))
 
 # Set Linker-Script Depending On Selected Memory and Controller
-
 
 #This line is used if you want to load main.hex into 0x00
 #LDFLAGS +=-Tlpc2138.cmd
@@ -243,17 +254,17 @@ MSG_FORMATERROR = Can not handle output-format
 MSG_LPC21_RESETREMINDER = You may have to bring the target in bootloader-mode now.
 
 # Define all object files.
-COBJ      = $(SRC:.c=.o) 
+COBJ      = $(SRC:.c=.o)
 AOBJ      = $(ASRC:.S=.o)
 COBJARM   = $(SRCARM:.c=.o)
 AOBJARM   = $(ASRCARM:.S=.o)
-CPPOBJ    = $(CPPSRC:.cpp=.o) 
+CPPOBJ    = $(INIT_CPPSRC:.cpp=.o) $(CPPSRC:.cpp=.o)
 CPPOBJARM = $(CPPSRCARM:.cpp=.o)
 
 
 # Define all listing files.
 LST = $(ASRC:.S=.lst) $(ASRCARM:.S=.lst) $(SRC:.c=.lst) $(SRCARM:.c=.lst)
-LST += $(CPPSRC:.cpp=.lst) $(CPPSRCARM:.cpp=.lst)
+LST += $(INIT_CPPSRC:.cpp=.lst) $(CPPSRC:.cpp=.lst) $(CPPSRCARM:.cpp=.lst)
 
 # Compiler flags to generate dependency files.
 ### GENDEPFLAGS = -Wp,-M,-MP,-MT,$(*F).o,-MF,.dep/$(@F).d
@@ -266,7 +277,8 @@ ALL_ASFLAGS = -mcpu=$(MCU) $(THUMB_IW) -I. -x assembler-with-cpp $(ASFLAGS)
 
 
 # Default target.
-all: begin gccversion sizebefore build sizeafter finished end
+.DEFAULT_GOAL:= all
+all: begin gccversion sizebefore build finished end
 
 #ifeq ($(FORMAT),ihex)
 #build: elf hex lss sym
@@ -274,9 +286,9 @@ all: begin gccversion sizebefore build sizeafter finished end
 #IMGEXT=hex
 #else 
 #ifeq ($(FORMAT),binary)
-build: elf bin lss hex FW.SFE html
+build: elf bin lss hex
 
-bin: $(TARGET).nosource.bin $(TARGET).bin
+bin: $(TARGET).bin
 hex: $(TARGET).hex
 elf: $(TARGET).elf
 lss: $(TARGET).lss 
@@ -300,7 +312,7 @@ Doxyfile: ../libraries/System/Doxyfile.template
 	    < $< > $@
 
 html: Doxyfile $(ALLTAR)
-	doxygen	   
+	doxygen
 
 # Display size of file.
 HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
@@ -318,71 +330,14 @@ gccversion :
 
 
 # Program the device.  - lpc21isp will not work for SAM7
-program: $(LPC21ISP_FLASHFILE)
+program: $(LPC21ISP_FLASHFILE) $(TARGET).lss sizeafter
 	@echo
 	@echo $(MSG_LPC21_RESETREMINDER)
 	$(LPC21ISP) $(LPC21ISP_OPTIONS) $(LPC21ISP_DEBUG) $(LPC21ISP_FLASHFILE) $(LPC21ISP_PORT) $(LPC21ISP_BAUD) $(LPC21ISP_XTAL)
 
-TAR_EXT = max.zpaq
-
-TARBALL = $(TARGET).tar.$(TAR_EXT)
-
-$(TARGET).tar: $(ALLTAR)
-	$(CC) --version --verbose > /tmp/gccversion.txt 2>&1
-	tar chvf $(TARGET).tar -C .. $(addprefix $(TARGETBASE)/, $(ALLTAR)) /tmp/gccversion.txt
-
-%.tar.xz: %.tar
-	xz -kf $<
-
-%.tar.bz2: %.tar
-	bzip2 -kf $< 
-
-%.tar.Z: %.tar
-	compress -c < $< > $@
-
-%.tar.gz: %.tar
-	gzip < $< > $@
-
-%.tar.gz9: %.tar
-	gzip -9 < $< > $@
-
-%.tar.lzo: %.tar
-	lzop -f $<
-
-%.tar.lz: %.tar
-	lzip -kf $<
-
-%.zip: %.tar
-	$(REMOVE) -rf $(@).tmpdir
-	mkdir $(@).tmpdir
-	cd $(@).tmpdir; \
-	tar xf ../$(<); \
-	zip -r ../$(@) *; 
-	$(REMOVE) -rf $(@).tmpdir
-
-$(TARGET).7z: $(TARGET).tar
-	$(REMOVE) -rf $(@).tmpdir
-	mkdir $(@).tmpdir
-	cd $(@).tmpdir; \
-	tar xf ../$(<); \
-	7z a ../$(TARGET).7z *; 
-	$(REMOVE) -rf $(@).tmpdir
-
-%.tar.mid.zpaq: %.tar
-	zpaq tc$(ZPAQDIR)/mid.cfg $@ $<
-
-%.tar.max.zpaq: %.tar
-	zpaq tc$(ZPAQDIR)/max.cfg $@ $<
-
-TEST_ARCHIVE = $(TARGET).tar.xz $(TARGET).tar.bz2 $(TARGET).tar.Z $(TARGET).tar.gz $(TARGET).tar.gz9 $(TARGET).tar.lzo $(TARGET).tar.lz $(TARGET).zip $(TARGET).7z $(TARGET).tar.mid.zpaq $(TARGET).tar.max.zpaq
-
-test_archive: $(TEST_ARCHIVE)
-
-$(TARBALL).o: $(TARBALL)
-	$(OBJCOPY) -I binary -O elf32-littlearm $(TARBALL) $(TARBALL).o --rename-section .data=.source -B arm
 
 # Create final output file (.hex) from ELF output file.
-%.hex: FW.SFE
+%.hex: %.bin
 	@echo
 	@echo $(MSG_FLASH) $@
 	srec_cat -O $@ -I $< -bin
@@ -392,20 +347,6 @@ $(TARGET).bin: $(TARGET).elf
 	@echo
 	@echo $(MSG_FLASH) $@
 	$(OBJCOPY) -O binary $< $@
-
-# Create final output file (.bin) from ELF output file.
-$(TARGET).nosource.bin: $(TARGET).nosource.elf 
-	@echo
-	@echo $(MSG_FLASH) $@
-	$(OBJCOPY) -O binary $< $@
-
-# Concatenate binary and source archive into binary firmware image
-FW.SFE: $(TARGET).bin
-	@echo
-	@echo $(MSG_FLASH) $@
-	$(COPY) $(TARGET).bin FW.SFE
-	if test -d $(MEDIA); then $(COPY) $@ $(MEDIA); fi
-	wc -l $(ALLTAR)
 
 # Create extended listing file from ELF output file.
 # testing: option -C
@@ -421,16 +362,10 @@ FW.SFE: $(TARGET).bin
 .SECONDARY : $(TARGET).elf
 .PRECIOUS : $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM)
 
-$(TARGET).elf:  $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) $(TARGET).tar.max.zpaq.o $(TARGET).nosource.elf
+$(TARGET).elf:  $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) $(EXTRAOBJ)
 	@echo
 	@echo $(MSG_LINKING) $@
-	$(CC) $(THUMB) $(ALL_CFLAGS) $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) $(TARGET).tar.$(TAR_EXT).o --output $@ $(LDFLAGS)
-
-$(TARGET).nosource.elf:  $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) 
-	@echo
-	@echo $(MSG_LINKING) $@
-	$(CC) $(THUMB) $(ALL_CFLAGS) $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) --output $(TARGET).nosource.elf $(LDFLAGS)
-
+	$(CC) $(THUMB) $(ALL_CFLAGS) $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) $(EXTRAOBJ) --output $@ $(LDFLAGS)
 
 # Compile: create object files from C source files. ARM/Thumb
 $(COBJ) : %.o : %.c
@@ -525,7 +460,6 @@ clean_list :
 	$(REMOVE) $(CPPSRCARM:.cpp=.s) 
 	$(REMOVE) $(CPPSRCARM:.cpp=.d)
 	$(REMOVE) $(CPPSRCARM:.cpp=.e)
-	$(REMOVE) FW.SFE
 	$(REMOVE) .dep/*
 	$(REMOVE) doxygen*.tmp
 

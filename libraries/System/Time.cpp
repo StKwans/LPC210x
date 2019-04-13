@@ -1,9 +1,11 @@
 #include "Time.h"
 #include "LPC214x.h"
 
-unsigned int PCLK,CCLK,timerInterval;
+unsigned int Time::PCLK;
+unsigned int Time::CCLK;
+unsigned int Time::timerInterval;
 
-static void measurePCLK(void) {
+void Time::measurePCLK(void) {
   CCLK=FOSC*((PLLSTAT(0) & 0x1F)+1);
   switch (VPBDIV & 0x03) {
     case 0:
@@ -22,7 +24,7 @@ static void measurePCLK(void) {
                            //    J  F  M  A  M  J  J  A  S  O  N  D
 static const char monthTable[]={ 0,31,28,31,30,31,30,31,31,30,31,30};
 
-void set_rtc(int y, int m, int d, int h, int n, int s) {
+void Time::set_rtc(int y, int m, int d, int h, int n, int s) {
   RTCYEAR=y;
   RTCMONTH=m;
   RTCDOM=d;
@@ -34,15 +36,18 @@ void set_rtc(int y, int m, int d, int h, int n, int s) {
   RTCSEC=s;
 }
 
-uint32_t uptime() {
+uint32_t Time::uptime() {
   return RTCDOY*86400+RTCHOUR*3600+RTCMIN*60+RTCSEC;
 }
 
-void setup_clock(void) {
+Time::Time(int pll0_M) {
   // Setting peripheral Clock (pclk) to System Clock (cclk)
   VPBDIV=0x1;
-
-  measurePCLK();
+  setup_pll(0,pll0_M); //Set up CCLK PLL to 5x crystal rate
+  // Enabling MAM and setting number of clocks used for Flash memory fetch (4 cclks in this case)
+  //MAMTIM=0x3; //VCOM?
+  MAMCR=0x2;
+  MAMTIM=0x4; //Original
 
   //Set up Timer0 to count up to timerSec seconds at full speed, then auto reset with no interrupt.
   //This is needed for the accurate delay function and the task manager
@@ -88,26 +93,26 @@ void setup_clock(void) {
 }
 
 /**accurate delay. Relies on Timer0 running without pause at PCLK and resetting
- at timerSec seconds, as by setup_clock(). Code only reads, never writes, Timer0 registers */
+ at timerSec seconds, as by Time::Time(). Code only reads, never writes, Timer0 registers */
 void delay(unsigned int count) {
   unsigned int TC0=TTC(0);
-  //count off whole seconds
-  while(count>=1000*timerSec) {
-    //wait for the top of the second
+  //count off whole timer reset cycles
+  while(count>=1000*Time::timerSec) {
+    //wait for the top of the timer reset cycle
     while(TTC(0)>TC0) ;
-    //wait for the bottom of the second
+    //wait for the bottom of the timer reset cycle
     while(TTC(0)<TC0) ;
-    count-=1000*timerSec;
+    count-=1000*Time::timerSec;
   }
   if(count==0) return;
-  unsigned int TC1=TC0+count*(PCLK/1000);
-  if(TC1>timerInterval) {
+  unsigned int TC1=TC0+count*(Time::PCLK/1000);
+  if(TC1>Time::timerInterval) {
     //Do this while we are waiting
-    TC1-=timerInterval;
-    //wait for the top of the second
+    TC1-=Time::timerInterval;
+    //wait for the top of the timer reset cycle
     while(TTC(0)>TC0) ;
   }
-  //wait for the rest of the second
+  //wait for the rest of the delay time
   while(TTC(0)<TC1) ;
 }
 
@@ -132,7 +137,7 @@ static void feed(int channel) {
 number. May be between 1 and 32, but in practice must not exceed 5 with a 12MHz 
 crystal.
 */	        
-void setup_pll(unsigned int channel, unsigned int M) {
+void Time::setup_pll(unsigned int channel, unsigned int M) {
   //Figure out N, exponent for PLL divider value, P=2^N. Intermediate frequency will be
   //FOSC*M*2*P=FOSC*M*2*2^N, and must be between 156MHz and 320MHz. This selects the lowest
   //N which satisfies the frequency constraint
@@ -152,8 +157,9 @@ void setup_pll(unsigned int channel, unsigned int M) {
   // Connect the PLL as the clock source
   PLLCON(channel)=0x3;
   feed(channel);
-
+  //Make sure PCLK and CCLK variables are correct
+  if(channel==0) measurePCLK();
 }
 
- 
+Time sysclock;
                                               

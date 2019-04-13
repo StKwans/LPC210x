@@ -64,6 +64,9 @@ SECTIONS
     > ROM
 
     /* .ctors .dtors are used for c++ constructors/destructors */
+    /* We count on the fact that *(.section) concatenates sections in order that the linker encounters
+       the input files. Except for libraries, this is the order that the .o files are passed to the
+        linker on its command line. This specifies the othwerise implementation-determined but unspecified order. */
     .ctors :
     {
         ctors_start = .;
@@ -91,9 +94,7 @@ global destructors are never called. */
 
     .source : 
     {
-        source_start = .;
-        KEEP(*(.source))
-        source_end = .;
+        *(.source)
         . = ALIGN(16);
     }
     >ROM
@@ -116,6 +117,12 @@ is in between read-only data and initialized data. */
     }
     > RAM
 
+    .devid : 
+    {
+        device_id = .;
+    }
+    >DEVICE_ID
+
     /* .bss section which is used for uninitialized (zeroed) data */
     .bss (NOLOAD) :
     {
@@ -130,10 +137,19 @@ is in between read-only data and initialized data. */
 
     .stack (NOLOAD):
     {
+        stack_start = . ;
         *(.stack)
         . = ALIGN(16);
     }
     > RAM
+
+    .ram_iap (NOLOAD) :
+    {
+        ram_end = . ;
+        *(.ram_isp)
+        . = ALIGN(16);
+    }
+    > RAM_IAP
 
     .usb (NOLOAD):
     {

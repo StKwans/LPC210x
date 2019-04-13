@@ -148,9 +148,9 @@ void Reset_Handler() {
   setModeStack(Stack_FIQ,FIQ_Stack_Size  , Mode_FIQ | I_Bit | F_Bit);  //...for FIQ mode
   setModeStack(Stack_IRQ,IRQ_Stack_Size  , Mode_IRQ | I_Bit | F_Bit);  //...for IRQ mode
   setModeStack(Stack_SVC,SVC_Stack_Size  , Mode_SVC | I_Bit | F_Bit);  //...for Supervisor mode
-  setModeStack(Stack_USR,USR_Stack_Size(), Mode_SYS | I_Bit | F_Bit);  //...for User and System mode. Interrupts are on, but nothing should have any interrupts set up yet
+  setModeStack(Stack_USR,USR_Stack_Size(), Mode_SYS | I_Bit | F_Bit);  //...for User and System mode. Leave interrupts disabled, VIC setup will handle turning them on.
 
-//Now stay in system mode for good                
+//Now stay in system mode for good
 
 // We get to be part of the implementation at this point. The implementation is required to do the following
 //   in the following order. Section 6.2.2 of C++17 now says do either zero-initialization or constant
@@ -160,28 +160,28 @@ void Reset_Handler() {
 //   initializations.
 
 // Static-initialize the memory for the static-intialized static variables (constant initialization). The G++ compiler builds a .data.*
-// section for each variable in each translation unit, calculating the values at compile-time. The linker 
+// section for each variable in each translation unit, calculating the values at compile-time. The linker
 // combines all of the sections into the .data section of the final object, and provides symbols data and edata
 // at each end of the section in RAM where the variables will live, and the symbol bdata pointing to the beginning
-// of the image of the section in ROM. This code then copies that section from ROM to RAM. 
+// of the image of the section in ROM. This code then copies that section from ROM to RAM.
   for(int i=0;i<(edata-data);i++) data[i]=bdata[i];
 // Zero-initialize the memory for the the zero-initialized static variables (zero initialization). The G++ compiler builds a .bss.*
 // section for each zero-initialized variable. The linker combines them all into a .bss section with no image in the final
 // object, and symbols bss_start and bss_end at each end of the section in RAM. This code then zeros out that section of RAM.
   for(int i=0;i<(bss_end-bss_start);i++) bss_start[i]=0;
 
-// call C++ constructors of global objects (Dyanmic initialization). G++ compiler makes a function (_GLOBAL__sub_I__*) 
+// call C++ constructors of global objects (Dyanmic initialization). G++ compiler makes a function (_GLOBAL__sub_I__*)
 // for each translation unit which is equivalent to calling constructors for static objects, and calling functions
-// needed to calculate initialization values for non-objects. It also makes a section which has a pointer
-//Each pointer is the pointer to a short block of code, and appears to be a static
-//function which which constructs all the global objects in the same compilation unit.
-//This code is free to call constructors and/or perform inline constructors directly.
-//Note that the compiler is also free to construct an object by putting data into
-//the .data pre-initialized variable section.
-//As a static function, the pointee code uses BX lr to return
+// needed to calculate initialization values for non-objects. It also makes a section (.ctors) which has a pointer to this function.
+// The linker gathers up all of these sections and pastes them together with no padding, effectively concatenating them all into an
+// array of pointers to void functions. It puts symbols at each end of the array.
+// This code is free to call constructors and/or perform inline constructors directly.
+// Note that the compiler is also free to construct an object by putting data into
+// the .data pre-initialized variable section.
+// As a function, the pointee code uses BX lr to return
   for(int i=0;i<ctors_end-ctors_start;i++) ctors_start[i]();
 
-//We have finally broken the tyranny of main(). Directly call user's setup()
+//We have finally broken the tyranny of main(). Directly call user's setup(). Freestanding environments are allowed to not use main().
   setup();
 //Directly call user's loop();
   for(;;) loop();

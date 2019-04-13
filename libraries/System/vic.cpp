@@ -1,11 +1,32 @@
 #include "LPC214x.h" 
-#include "irq.h"
+#include "vic.h"
+
+  /** Initialize the interrupt controller. Clear out all vector slots */
+VICDriver::VICDriver(void) {
+  // initialize VIC
+  VICIntEnClr = 0xffffffff;
+  VICVectAddr = 0;
+  VICIntSelect = 0;
+
+  // set all the vector and vector control register to 0 
+  for (int i = 0; i < VIC_SIZE; i++ ) {
+    VICVectAddrSlot(i) = 0;
+    VICVectCntlSlot(i) = 0;
+  }
+
+  /* Install the default VIC handler here */
+  VICDefVectAddr = (int)DefaultVICHandler;
+
+  //Now it is safe to activate interrupts
+  enable_ints();
+}
 
 //Now we see why we like high-level languages for IRQ handling. It says treat
 //the number as a pointer to a function and call it.
-typedef void (*fvoid)(void);
-void IRQHandler::IRQ_Wrapper() {
-  ((fvoid)(VICVectAddr))(); 
+void VICDriver::IRQ_Wrapper() {
+  ((irqHandler)(VICVectAddr))(); 
+  //ACK the VIC
+  VICVectAddr=0;
 }
 
 /** 
@@ -14,30 +35,12 @@ void IRQHandler::IRQ_Wrapper() {
   default interrupt VIC address will be used. This could happen in a race
   condition. For debugging, use this endless loop to trace back. 
   For more details, see Philips appnote AN10414 */
-void IRQHandler::DefaultVICHandler(void) {
+void VICDriver::DefaultVICHandler(void) {
   //Print 'E' forever on UART0 at whatever is its current settings
   while ( 1 ) {
     while (!(U0LSR & 0x20));
     U0THR = 'E';
   }
-}
-
-/** Initialize the interrupt controller. Clear out all vector slots */
-void IRQHandler::begin(void) {
-    // initialize VIC
-    VICIntEnClr = 0xffffffff;
-    VICVectAddr = 0;
-    VICIntSelect = 0;
-
-    // set all the vector and vector control register to 0 
-    for (int i = 0; i < VIC_SIZE; i++ ) {
-      VICVectAddrSlot(i) = 0;
-      VICVectCntlSlot(i) = 0;
-    }
-
-    /* Install the default VIC handler here */
-    VICDefVectAddr = (int)DefaultVICHandler;
-    return;
 }
 
 /**
@@ -53,7 +56,7 @@ void IRQHandler::begin(void) {
  \param HandlerAddr interrupt handler address
  \return      true if handler installed, false if not (table full)
 */
-bool IRQHandler::install(unsigned int IntNumber, irqHandler HandlerAddr ) {
+bool VICDriver::install(unsigned int IntNumber, irqHandler HandlerAddr ) {
   VICIntEnClr = 1 << IntNumber;   //Disable Interrupt 
 
   for (int i = 0; i < VIC_SIZE; i++ ) {
@@ -80,7 +83,7 @@ bool IRQHandler::install(unsigned int IntNumber, irqHandler HandlerAddr ) {
  \note You can install the same channel in multiple VIC slots. It's not a good idea, but possible. If you do so, this
        will only uninstall the one with the earliest priority (lowest numbered slot).
 */
-bool IRQHandler::uninstall(unsigned int IntNumber ) {
+bool VICDriver::uninstall(unsigned int IntNumber ) {
   VICIntEnClr = 1 << IntNumber;   /* Disable Interrupt */
 
   for (int i = 0; i < VIC_SIZE; i++ ) {
@@ -94,4 +97,4 @@ bool IRQHandler::uninstall(unsigned int IntNumber ) {
   return false;        // fatal error, can't find interrupt number in vector slot 
 }
 
-
+VICDriver VIC;

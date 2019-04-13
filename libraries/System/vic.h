@@ -1,17 +1,50 @@
-#ifndef IRQ_H 
-#define IRQ_H
+#ifndef VIC_H 
+#define VIC_H
 
 typedef void (*irqHandler)(void);
 
-class IRQHandler {
+inline void set_cpsr_c(const int val) {
+  asm volatile (" msr  cpsr_c, %0" : /* no outputs */ : "ir" (val)  );	
+}
+
+inline int get_cpsr_c() {
+  int result;
+  asm volatile (" mrs  %0, cpsr" :  "=r" (result) : /* no inputs */ );	
+  return result;
+}
+
+static const int I_Bit=0x80;    // when I bit is set, IRQ is disabled 
+static const int F_Bit=0x40;    // when F bit is set, FIQ is disabled 
+
+inline void enable_irq() {
+  set_cpsr_c(get_cpsr_c() & ~I_Bit);
+}
+inline void enable_fiq() {
+  set_cpsr_c(get_cpsr_c() & ~F_Bit);
+};
+inline void disable_irq() {
+  set_cpsr_c(get_cpsr_c() | I_Bit);
+};
+inline void disable_fiq(){
+  set_cpsr_c(get_cpsr_c() | F_Bit);
+};
+inline void enable_ints() {;
+  set_cpsr_c(get_cpsr_c() & ~(I_Bit|F_Bit));
+}
+inline void disable_ints() {
+  set_cpsr_c(get_cpsr_c() | (I_Bit|F_Bit));
+}
+
+class VICDriver {
 private:
   static void DefaultVICHandler(void);
   static const int IRQ_SLOT_EN=(1 << 5); ///< bit 5 in Vector control register 
   static const int VIC_SIZE	=16; ///<Number of VIC slots
 public:  
-  static void begin( void );
-  static bool install(unsigned int IntNumber, irqHandler HandlerAddr );
-  static bool uninstall(unsigned int IntNumber );
+  VICDriver();
+
+  bool install(unsigned int IntNumber, irqHandler HandlerAddr );
+  bool uninstall(unsigned int IntNumber );
   static void __attribute__ ((interrupt("IRQ"))) IRQ_Wrapper();
 
   static const int WDT		= 0; ///< Watchdog timer  
@@ -39,6 +72,8 @@ public:
   static const int USB		=22; ///< USB and DMA interrupt
 
 };
+
+extern VICDriver VIC;
 
 #endif
 
