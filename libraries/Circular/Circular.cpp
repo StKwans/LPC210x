@@ -32,7 +32,7 @@ bool Circular::fill(const char* in) {
 
 bool Circular::fill(const char* in, uint32_t len) {
   for(uint32_t i=0;i<len;i++) {
-    if(!fill(in[i])) return false;;
+    if(!fill(in[i])) return false;
   }
   return true;
 }
@@ -100,9 +100,4 @@ bool Circular::drain(Circular& to) {
   return true;
 }
 
-void Circular::empty() {
-  head=0;
-  tail=0;
-  mid=0;
-}
 

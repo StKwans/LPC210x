@@ -35,7 +35,7 @@ public:
   //Add a char to the buffer, not ready to be flushed yet
   bool fill(char in);
 
-  void empty();
+  void empty() {head=0;tail=0;mid=0;};
 
   bool fill(const char* in);
   bool fill(const char* in, uint32_t len);
@@ -56,22 +56,26 @@ public:
   bool fill16LE(uint16_t in) {return fill((char*)&in,2);};
   bool fill32LE(uint32_t in) {return fill((char*)&in,4);};
 
-
   //Mark all current unready data as ready
-  void mark() {mid=head;};
+  virtual void mark() {mid=head;};
+
 
   //Get the next character ready to be flushed
   char get();
   //Get all ready data from one buffer and copy it to another (as ready also)
+  //Returns true if some data was drained, false if not. 
   bool drain(Circular& to);
+  //Intended to do a drain to something that a subclass knows about, say 
+  //a file or stream printer.
+  virtual bool drain() {return true;};
   //Get the number of characters which aren't ready yet
   int unreadylen();
   //Get the number of characters which are ready
   int readylen();
 
-  char peekTail(int ahead);
-  char peekMid(int ahead);
-  char peekHead(int ahead);
+  char peekTail(int ahead=0);
+  char peekMid(int ahead=0);
+  char peekHead(int ahead=0);
 
   void pokeTail(int ahead, char poke);
   void pokeMid(int ahead, char poke);
