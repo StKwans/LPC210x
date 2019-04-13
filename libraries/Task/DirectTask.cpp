@@ -27,8 +27,6 @@ void DirectTaskManager::begin() {
 
 void DirectTaskManager::handleTimerISR() {
   directTaskManager.handle();
-  //ACK the VIC
-  VICVectAddr=0;
 }
 
 void DirectTaskManager::handle() {
