@@ -12,6 +12,30 @@ void Dump::region(const char* p, int base, int len, int rec_len) {
   end();
 }
 
+void Dump::region(const char* p0, const char *p1, int base, int len0, int len1, int rec_len) {
+  begin();
+  //Print the first part complete lines
+  while(len0>=rec_len) {
+    line(p0,base,rec_len);
+    base+=rec_len;
+    p0+=rec_len;
+    len0-=rec_len;
+  }
+  int len_mid=(rec_len-len0)>len1?len1:(rec_len-len0);
+  line(p0,p1,base,len0,len_mid);
+  p1+=len_mid;
+  len1-=len_mid;
+  base+=len_mid+len0;
+  while(len1>0) {
+    if(rec_len>len1) rec_len=len1;
+    line(p1,base,rec_len);
+    base+=rec_len;
+    p1+=rec_len;
+    len1-=rec_len;
+  }
+  end();
+}
+
 void IntelHex::print_byte(unsigned char b) {
   checksum+=b;
   out.print(b>>4,HEX);
@@ -58,6 +82,14 @@ void IntelHex::line(const char* start, int base, int len) {
   end_line();
 }
 
+void IntelHex::line(const char* start0,const char* start1, int base, int len0, int len1) {
+  address(base);
+  begin_line(len0+len1,((unsigned int)base)&0xFFFF,0);
+  for(int i=0;i<len0;i++) print_byte(start0[i]);
+  for(int i=0;i<len1;i++) print_byte(start1[i]);
+  end_line();
+}
+
 void Base85::print_group(const char* p, int len) {
   unsigned int group=0;
   for(int i=0;i<4;i++) {
@@ -94,6 +126,27 @@ void Hd::line(const char* start, int base, int len) {
   }
   out.print(' ');
   for(int i=0;i<len;i++) out.print((start[i]>=32 && start[i]<127)?start[i]:'.');
+  out.println();
+}
+
+void Hd::line(const char* start0, const char* start1, int base, int len0, int len1) {
+  out.print(base,HEX,4);
+  out.print(' ');
+  for(int i=0;i<len0;i++) {
+    out.print(start0[i],HEX,2);
+    if(i%4==3) out.print(' ');
+  }
+  for(int i=0;i<len1;i++) {
+    out.print(start1[i],HEX,2);
+    if((i+len0)%4==3) out.print(' ');
+  }
+  for(int i=len0+len1;i<preferredLen;i++) {
+    out.print("  ");
+    if(i%4==3) out.print(' ');
+  }
+  out.print(' ');
+  for(int i=0;i<len0;i++) out.print((start0[i]>=32 && start0[i]<127)?start0[i]:'.');
+  for(int i=0;i<len1;i++) out.print((start1[i]>=32 && start1[i]<127)?start1[i]:'.');
   out.println();
 }
 

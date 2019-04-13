@@ -9,16 +9,27 @@ extern char source_end[];
 
 class Dump {
 protected:
-  Print& out;
-  int preferredLen;
+  Print& out; 
 public:
+  int preferredLen;
   Dump(Print& Lout, int LpreferredLen):out(Lout),preferredLen(LpreferredLen) {};
   virtual void begin() {};
   virtual void end() {};
   virtual void line(const char* start, int base, int len)=0;
+  virtual void line(const char* start0, const char* start1, int base, int len0, int len1) {
+    line(start0,base,len0);
+    line(start1,base+len0,len1);
+  }
   void region(const char* start, int base, int len, int rec_len);
   void region(const char* start, int len, int rec_len) {region(start,(int)start,len,rec_len);};
   void region(const char* start, int len) {region(start,0,len,preferredLen);};
+  //Display two regions as if they were contiguous. Useful for going around
+  //the corner of a circular buffer
+  void region(const char* start0, const char* start1, int base, int len0, int len1, int rec_len);
+  void region(const char* start0, const char* start1, int base, int len0, int len1) {region(start0,start1,base,len0,len1,preferredLen);};
+  //The following matches the above for printing a default base, but "default base"
+  //doesn't make sense for two consecutive regions.
+  //void region(const char* start0, const char* start1, int len0, int len1) {region(start0,start1,(int)start0,len0,len1,preferredLen);};
   void dumpText() {region(btext,etext-btext,preferredLen);};
   void dumpSource() {region(source_start,0,source_end-source_start,preferredLen);}
 };
@@ -33,6 +44,7 @@ private:
   void address(int ia);
 public:
   IntelHex(Print& Lout):Dump(Lout,32) {};
+  virtual void line(const char* start0, const char* start1, int base, int len0, int len1);
   virtual void begin();
   virtual void end();
   virtual void line(const char* start, int base, int len);
@@ -52,6 +64,7 @@ public:
 
 class Hd: public Dump {
 public:
+  virtual void line(const char* start0, const char* start1, int base, int len0, int len1);
   Hd(Print& Lout):Dump(Lout,16) {};
   Hd(Print& Lout, int LpreferredLen):Dump(Lout,LpreferredLen) {};
   virtual void line(const char* start, int base, int len);
