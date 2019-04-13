@@ -32,6 +32,9 @@ typedef unsigned int size_t; //#include <stdio.h> // for size_t
 #define BIN 2
 #define BYTE 0
 
+
+//This is intended to be an abstract class, but can be instantiated directly
+//as a /dev/null type printer.
 class Print {
   private:
     void printNumber(unsigned int, int,int);
@@ -40,7 +43,7 @@ class Print {
 #endif
     void printFloat(fp, unsigned char);
   public:
-    virtual void write(unsigned char) = 0;
+    virtual void write(unsigned char) {};
     virtual void write(const char *str);
     virtual void write(const char *buffer, size_t size);
     
@@ -68,6 +71,7 @@ class Print {
     void println(void) {print('\r');print('\n');};
     void printf(char const *format, ... );
 };
+extern Print devnull;
 
 #endif
 
