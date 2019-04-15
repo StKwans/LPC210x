@@ -15,7 +15,7 @@ protected:
   //parser can parse other packets based on doc packets. Naturally, doc packets
   //must come before each packet that is being documented, and here is where you
   //have to be careful. "A beginning is the time for taking the most delicate 
-  //care that the balances are correct." It is not possible to document doc 
+  //care that the balances are correct." It is not possible to machine-read the doc 
   //packets with doc packets, because there is a boostrap problem. The parser will
   //have to have the definition of a doc packet pre-available, probably encoded
   //directly into its code. 
@@ -54,21 +54,25 @@ public:
   static const uint8_t t_double= 5; ///< Field type is IEEE754 double-precision 64-bit float
   static const uint8_t t_string= 7; ///< Field is a byte string of arbitrary length. No length info provided, it must be provided elsewhere. Intent is UTF-8 text with replace on error.
   static const uint8_t t_binary=10; ///< Field is a byte string of arbitrary length. No length info provided, it must be provided elsewhere. We steal the pointer type from IDL
-  static const uint16_t apid_doc=1;
-  static const uint16_t apid_metadoc=2;
+  static const uint16_t apid_doc=1; ///< Apid of a documentation packet. DO NOT USE this for a normal packet, as it triggers certain special cases.
+  static const uint16_t apid_metadoc=2; ///< Apid of a metadoc packet.
   //Abstract interface -- to be implemented by derived classes
-  virtual bool start(uint16_t apid, uint32_t TC=0xFFFFFFFF)=0;
-  virtual bool finish(uint16_t tag)=0;
-  virtual bool fillu16(uint16_t in)=0;
-  virtual bool fillu32(uint32_t in)=0;
-  virtual bool fillu64(uint64_t in)=0;
-  virtual bool fillfp(fp f)=0;
-  virtual bool metaDoc()=0;
+  virtual bool start(uint16_t apid /**< [in] apid of packet to be started*/, 
+                     uint32_t TC=0xFFFFFFFF /**< [in] Timestamp of packet to be started, written as the secondary header. If set to default value, the packet will not get a secondary header at all.*/)=0; ///< Start a packet
+  virtual bool finish(uint16_t tag /**< [in] apid of packet to finish, used to check that we are finishing the same kind of packet we started*/)=0; ///< Finish a packet.
+  virtual bool fillu16(uint16_t in /**< [in] value to write in packet*/)=0; ///< Write a 16-bit unsigned integer to the packet
+  virtual bool fillu32(uint32_t in /**< [in] value to write in packet*/)=0; ///< Write a 32-bit unsigned integer to the packet
+  virtual bool fillu64(uint64_t in /**< [in] value to write in packet*/)=0; ///< Write a 64-bit unsigned integer to the packet
+  virtual bool fillfp(fp f /**< [in] value to write in packet*/)=0; ///< Write a floating-point number to the packet
+  virtual bool metaDoc() {}; ///< Write the meta-documentation for this packet format. Should create a series of packets with string payloads, the contents of which document the packet structure in English.
 
   //In general below, we won't use virtual until we have a use-case. Once a
   //derived class needs to override, make that one virtual.
-  Packet(Circular &Lbuf):buf(Lbuf) {};
-  bool start(uint16_t apid, const char* pktName, uint32_t TC=0xFFFFFFFF) {
+  Packet(Circular &Lbuf):buf(Lbuf) {}; 
+  /** Start and document a packet. This creates the documentation for the packet itself, aside from all the fields of the packet.*/     
+  bool start(uint16_t apid /**< [in] apid of packet to be started*/,
+             const char* pktName /**< [in] packet name. Should be unique across all packets, and should be a valid identifier -- something that matches regular expression [A-Za-z_][A-Za-z0-9_]* will work in most programming languages.*/,
+             uint32_t TC=0xFFFFFFFF /**< [in] Timestamp of packet to be started, written as the secondary header. If set to default value, the packet will not get a secondary header at all.*/) {
     doc_apid=apid;
     Debug.print("Packet::start(apid=0x");
     Debug.print(apid,16,3);
@@ -88,24 +92,24 @@ public:
   };
   virtual bool fill(char in) {return buf.fill(in);};
   //The only reason I can think to override these is if we are not doing twos-complement.
-  bool filli16(uint16_t in) {return fillu16((uint16_t)in);};
-  bool filli32(uint32_t in) {return fillu32((uint32_t)in);};
-  bool filli64(uint64_t in) {return fillu64((uint64_t)in);};
+  bool filli16(uint16_t in) {return fillu16((uint16_t)in);};///< Write a 16-bit signed integer to the packet. Default implementation casts the value to an unsigned int and writes that.
+  bool filli32(uint32_t in) {return fillu32((uint32_t)in);};///< Write a 32-bit signed integer to the packet. Default implementation casts the value to an unsigned int and writes that.
+  bool filli64(uint64_t in) {return fillu64((uint64_t)in);};///< Write a 32-bit signed integer to the packet. Default implementation casts the value to an unsigned int and writes that.
   //Might need to override these for packets where data needs escape sequences. 
   //Leave non-virtual for now.
-  bool fill(const char*    value);
-  bool fill(const char*    value, uint32_t length);
+  bool fill(const char*    value);                  ///< Write a null-terminated string.            Note that this does nothing to record the length itself -- you may need to write the length separately.
+  bool fill(const char*    value, uint32_t length); ///< Write a binary buffer of arbitrary length. Note that this does nothing to record the length itself -- you may need to write the length separately.
   //These use the rest of the interface to document each field as needed
-  bool fill(      char     value,               const char* fieldName) {if(!writeDoc(t_u8    ,fieldName))return false;return fill   (value    );};
-  bool filli16( int16_t    value,               const char* fieldName) {if(!writeDoc(t_i16   ,fieldName))return false;return filli16(value    );};
-  bool filli32( int32_t    value,               const char* fieldName) {if(!writeDoc(t_i32   ,fieldName))return false;return filli32(value    );};
-  bool filli64( int64_t    value,               const char* fieldName) {if(!writeDoc(t_i64   ,fieldName))return false;return filli64(value    );};
-  bool fillu16(uint16_t    value,               const char* fieldName) {if(!writeDoc(t_u16   ,fieldName))return false;return fillu16(value    );};
-  bool fillu32(uint32_t    value,               const char* fieldName) {if(!writeDoc(t_u32   ,fieldName))return false;return fillu32(value    );};
-  bool fillu64(uint64_t    value,               const char* fieldName) {if(!writeDoc(t_u64   ,fieldName))return false;return fillu64(value    );};
-  bool fillfp (fp          value,               const char* fieldName) {if(!writeDoc(t_float ,fieldName))return false;return fillfp (value    );};
-  bool fill   (const char* value, uint32_t len, const char* fieldName) {if(!writeDoc(t_binary,fieldName))return false;return fill   (value,len);};
-  bool fill   (const char* value,               const char* fieldName) {if(!writeDoc(t_string,fieldName))return false;return fill   (value    );};
+  bool fill(      char     value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_u8    ,fieldName))return false;return fill   (value    );}; ///<Write and document an 8-bit value
+  bool filli16( int16_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_i16   ,fieldName))return false;return filli16(value    );}; ///<Write and document a signed 16-bit value
+  bool filli32( int32_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_i32   ,fieldName))return false;return filli32(value    );}; ///<Write and document a signed 32-bit value
+  bool filli64( int64_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_i64   ,fieldName))return false;return filli64(value    );}; ///<Write and document a signed 64-bit value
+  bool fillu16(uint16_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_u16   ,fieldName))return false;return fillu16(value    );}; ///<Write and document an unsigned 16-bit value
+  bool fillu32(uint32_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_u32   ,fieldName))return false;return fillu32(value    );}; ///<Write and document an unsigned 32-bit value
+  bool fillu64(uint64_t    value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_u64   ,fieldName))return false;return fillu64(value    );}; ///<Write and document an unsigned 64-bit value
+  bool fillfp (fp          value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_float ,fieldName))return false;return fillfp (value    );}; ///<Write and document a floating-point value
+  bool fill   (const char* value /**<[in] value to write*/, uint32_t len /**<[in] length of buffer to write*/, const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_binary,fieldName))return false;return fill   (value,len);}; ///<Write and document a binary buffer of arbitrary length.
+  bool fill   (const char* value /**<[in] value to write*/,                                                    const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_string,fieldName))return false;return fill   (value    );}; ///<Write and document a null-terminated string.
 };
 
 inline bool Packet::fill(const char* in) {

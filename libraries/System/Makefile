@@ -306,6 +306,7 @@ end:
 	@echo
 
 Doxyfile: ../libraries/System/Doxyfile.template
+	echo INCDEF: $(INCDEF)
 	sed -e 's%^[^I]*INPUT[ \t]*=.*$$%INPUT=$(ALLSRC) $(INCDEF)%' \
 	    -e 's%^[^P]*PROJECT_NAME[ \t]*=.*$$%PROJECT_NAME="$(TARGET)"%' \
 	    -e 's%^[^P]*PROJECT_BRIEF[ \t]*=.*$$%PROJECT_BRIEF=$(PROJECT_BRIEF)%' \

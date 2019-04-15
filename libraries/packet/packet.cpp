@@ -13,6 +13,10 @@ bool CCSDS::writeDoc(uint8_t type, const char* desc) {
   Debug.print(doc_apid,16,3);
   Debug.print("]=");
   Debug.println(docd[doc_apid],16,1);
+  if(!desc) {
+    Debug.println("Packet has no documentation");
+    return true;
+  }
   if(docd[doc_apid]) {
     Debug.println("apid is already documented");
     return true;
