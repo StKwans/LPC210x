@@ -1,16 +1,17 @@
 #include "StateTwoWire.h"
 #include "gpio.h"
 #include "Time.h"
-#include "irq.h"
 #include "Serial.h"
 
 //Define this to use interrupts - really doesn't gain 
 #undef I2C_IRQ
 
+#ifdef I2C_IRQ
+#include "vic.h"
+#endif
+
+
 //StateTwoWire: Use LPC214x hardware I2C port to implement TwoWire object
-StateTwoWire::StateTwoWire(int Lport):port(Lport) {
-  thisPtr[port]=this;
-}
 
 StateTwoWire *StateTwoWire::thisPtr[2];
 
@@ -169,7 +170,7 @@ void StateTwoWire::twi_init(unsigned int freq) {
   //Turn on appropriate I2C peripheral
   PCONP |= (1<<(7+port));
   //Set the clock rate
-  unsigned int rate=(PCLK/freq)/2;
+  unsigned int rate=(Time::PCLK/freq)/2;
   I2CSCLL(port)=rate;
   I2CSCLH(port)=rate;
   //Grab the pins needed

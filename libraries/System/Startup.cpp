@@ -130,14 +130,21 @@ vectorg(void) {
       ".word _Z11FIQ_Handlerv"); //FIQ
 }
 
-static inline void set_sp(const int* val) {
+//These two routines ABSOLUTELY MUST be inlined. Without the __attribute__((always_inline)) we don't get inlined at optimization level -O0
+static inline void __attribute__((always_inline)) set_sp(const int* val) {
   asm volatile (" mov  sp, %0" : : "r" (val));
 }
-static inline void setModeStack(int stack[], const int size, const int modeflags) {
+
+static inline void __attribute__((always_inline)) setModeStack(int stack[], const int size, const int modeflags) {
   set_cpsr_c(modeflags);
   set_sp(stack+size/sizeof(int));
   for(unsigned int i=0;i<(size/sizeof(int));i++) stack[i]=stackPattern;
 }
+/*
+#define setModeStack(stack,size,modeflags)  set_cpsr_c(modeflags);\
+     set_sp(stack+size/sizeof(int)); \
+     for(unsigned int i=0;i<(size/sizeof(int));i++) stack[i]=stackPattern 
+*/
 
 void Reset_Handler() {
   //Fill the stack space with a known pattern, so we can check stack usage

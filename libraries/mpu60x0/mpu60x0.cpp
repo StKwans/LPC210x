@@ -2,26 +2,26 @@
 #include "Serial.h"
 #include "Time.h"
 
-bool MPU6050::fillConfig(Packet& ccsds) {
-  if(!ccsds.fill(ADDRESS))    return false; // 6 I2C address
-  if(!ccsds.fill(read(0x0D))) return false; // 7 self_test_x
-  if(!ccsds.fill(read(0x0E))) return false; // 8 self_test_y
-  if(!ccsds.fill(read(0x0F))) return false; // 9 self_test_z
-  if(!ccsds.fill(read(0x10))) return false; //10 self_test_a
-  if(!ccsds.fill(read(0x19))) return false; //11 smplrt_div
-  if(!ccsds.fill(read(0x1A))) return false; //12 config
-  if(!ccsds.fill(read(0x1B))) return false; //13 gyro_config
-  if(!ccsds.fill(read(0x1C))) return false; //14 accel_config
-  if(!ccsds.fill(read(0x1F))) return false; //15 mot_thr
-  if(!ccsds.fill(read(0x37))) return false; //16 int_pin_cfg
-  if(!ccsds.fill(read(0x38))) return false; //17 int_enable
-  if(!ccsds.fill(read(0x6B))) return false; //18 pwr_mgmt_1
-  if(!ccsds.fill(read(0x75))) return false; //19 whoami
+bool MPU60x0::fillConfig(Packet& ccsds) {
+  if(!ccsds.fill(ADDRESS   ,"I2Caddress"  )) return false;
+  if(!ccsds.fill(read(0x0D),"self_test_x" )) return false;
+  if(!ccsds.fill(read(0x0E),"self_test_y" )) return false;
+  if(!ccsds.fill(read(0x0F),"self_test_z" )) return false;
+  if(!ccsds.fill(read(0x10),"self_test_a" )) return false;
+  if(!ccsds.fill(read(0x19),"smplrt_div"  )) return false;
+  if(!ccsds.fill(read(0x1A),"config"      )) return false;
+  if(!ccsds.fill(read(0x1B),"gyro_config" )) return false;
+  if(!ccsds.fill(read(0x1C),"accel_config")) return false;
+  if(!ccsds.fill(read(0x1F),"mot_thr"     )) return false;
+  if(!ccsds.fill(read(0x37),"int_pin_cfg" )) return false;
+  if(!ccsds.fill(read(0x38),"int_enable"  )) return false; 
+  if(!ccsds.fill(read(0x6B),"pwr_mgmt_1"  )) return false; 
+  if(!ccsds.fill(read(0x75),"whoami"      )) return false;
   return true;
 }
 
 bool MPU60x0::begin(uint8_t gyro_scale, uint8_t acc_scale) {
-  Serial.print("MPU60x0::begin(");Serial.print(gyro_scale,DEC);Serial.print(",");Serial.print(acc_scale,DEC);Serial.println(")");
+  //Serial.print("MPU60x0::begin(");Serial.print(gyro_scale,DEC);Serial.print(",");Serial.print(acc_scale,DEC);Serial.println(")");
   //Wake the part up, Set up the clock source (x gyro, 1)
   write(0x6B,(0 << 7) | (0 << 6) | (0 << 5) | (0x01 << 0));
   delay(50);
@@ -30,11 +30,11 @@ bool MPU60x0::begin(uint8_t gyro_scale, uint8_t acc_scale) {
   write(0x1A,(0x00<<3) | (0x03<<0));
   //Turn off all gyro self-test and set the gyro scale
   uint8_t gyro_config=(0 << 7) | (0 << 6) | (0 << 5) | ((gyro_scale & 0x03) << 3);
-  Serial.print("Gyro config: 0x");Serial.println(gyro_config,HEX,2);
+  //Serial.print("Gyro config: 0x");Serial.println(gyro_config,HEX,2);
   write(0x1B,gyro_config);
   //Turn off all acc  self-test and set the acc  scale
   uint8_t acc_config=(0 << 7) | (0 << 6) | (0 << 5) | ((acc_scale  & 0x03) << 3);
-  Serial.print("Acc  config: 0x");Serial.println(acc_config,HEX,2);
+  //Serial.print("Acc  config: 0x");Serial.println(acc_config,HEX,2);
   write(0x1C,acc_config);
   return true;
 }

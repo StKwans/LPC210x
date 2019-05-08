@@ -26,9 +26,12 @@ class TwoWire:public Stream {
     virtual uint8_t twi_readFrom(uint8_t address, char* data, uint8_t length)=0;
     //Write given number of bytes from given buffer to slave at given address
     virtual uint8_t twi_writeTo(uint8_t address, const char* data, uint8_t length, uint8_t wait)=0;
+  protected:
     static const int I2CFREQ=400000;
   public:
-    TwoWire();
+    /** Construct a TwoWire object */
+    TwoWire() {};
+    TwoWire(unsigned int freq):TwoWire() {begin(freq);};
     //Initialize the I2C peripheral as a master
     virtual void begin(unsigned int freq=I2CFREQ);
     //Start transmitting to a particular slave address
@@ -36,11 +39,12 @@ class TwoWire:public Stream {
 
     uint8_t endTransmission(void);
     uint8_t requestFrom(uint8_t, uint8_t);
-    virtual void write(uint8_t);
-    virtual int available(void);
-    virtual int read(void);
-    virtual int peek(void);
-    virtual void flush(void) {};
+    void write(uint8_t) override;
+    int available(void) override;
+    int read(void) override;
+    int peek(void) override;
+    void flush(void) override {};
 };
 
 #endif
+

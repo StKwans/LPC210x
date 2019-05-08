@@ -1,7 +1,7 @@
 #include "DirectTask.h"
 #include "Time.h"
 #include "LPC214x.h"
-#include "irq.h"
+#include "vic.h"
 #include "gpio.h"
 #ifdef DEBUG
 #include "Serial.h"
@@ -22,7 +22,7 @@ static const int TIR_CR3=(1<<7);
 
 void DirectTaskManager::begin() {
   //Monopolize the timer's interrupt
-  IRQHandler::install(IRQHandler::TIMER0+timer,handleTimerISR);
+  VIC.install(VIC.TIMER0+timer,handleTimerISR);
 }
 
 void DirectTaskManager::handleTimerISR() {
@@ -90,7 +90,7 @@ int DirectTaskManager::schedule(unsigned int channel, unsigned int ms, unsigned 
   Serial.print(",stuff=0x");Serial.print((unsigned int)stuff,HEX,8);
   Serial.println(")");
 #endif
-  return schedule(channel,ms*(PCLK/1000)+ticks,f,stuff);
+  return schedule(channel,ms*(Time::PCLK/1000)+ticks,f,stuff);
 }
 
 int DirectTaskManager::reschedule(unsigned int channel, unsigned int ticks, taskfunc f, void* stuff) {
@@ -107,7 +107,7 @@ int DirectTaskManager::reschedule(unsigned int channel, unsigned int ms, unsigne
   Serial.print(",stuff=0x");Serial.print((unsigned int)stuff,HEX,8);
   Serial.println(")");
 #endif
-  return reschedule(channel,ms*(PCLK/1000)+ticks,f,stuff);
+  return reschedule(channel,ms*(Time::PCLK/1000)+ticks,f,stuff);
 }
 
 

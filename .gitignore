@@ -6,4 +6,10 @@
 .dep/
 *.o64
 putty*.log
+*.bin
+*.elf
+*.hex
+*.lss
+*.map
+*.tar*
 

@@ -64,17 +64,17 @@ void BMP180::printCalibration(Stream *Louf) {
 }
 
 void BMP180::fillCalibration(Packet& pkt) {
-  pkt.fill16(ac1);
-  pkt.fill16(ac2);
-  pkt.fill16(ac3);
-  pkt.fill16(ac4);
-  pkt.fill16(ac5);
-  pkt.fill16(ac6);
-  pkt.fill16(b1);
-  pkt.fill16(b2);
-  pkt.fill16(mb);
-  pkt.fill16(mc);
-  pkt.fill16(md);
+  pkt.filli16(ac1,"ac1");
+  pkt.filli16(ac2,"ac2");
+  pkt.filli16(ac3,"ac3");
+  pkt.fillu16(ac4,"ac4");
+  pkt.fillu16(ac5,"ac5");
+  pkt.fillu16(ac6,"ac6");
+  pkt.filli16(b1,"b1");
+  pkt.filli16(b2,"b2");
+  pkt.filli16(mb,"mb");
+  pkt.filli16(mc,"mc");
+  pkt.filli16(md,"md");
 }  
  
 // Calculate temperature given ut.
@@ -165,8 +165,8 @@ void BMP180::startMeasurementCore() {
   // Write 0x2E into Register 0xF4
   // This requests a temperature reading
   port.beginTransmission(ADDRESS);
-  port.write(0xF4);
-  port.write(0x2E);
+  port.write(0xF4);//Address the ctrl_meas register (0xF4)
+  port.write(0x2E);//Write 0010_1110 to register. This sets the SCO bit to 1, the meas bits to 01110, and the OSS bits to 00.
   port.endTransmission();
 }
 
@@ -174,6 +174,7 @@ void BMP180::startMeasurement() {
   startMeasurementCore();
   start=true;
   ready=false;
+  //Required wait is 4.5ms, this asks for 5.0ms (500us margin)
   directTaskManager.schedule(timer_ch,5,0,&finishTempTask,this);
 }
 
@@ -185,14 +186,21 @@ void BMP180::finishTempCore() {
   // Write 0x34+(OSS<<6) into register 0xF4
   // Request a pressure reading w/ oversampling setting
   port.beginTransmission(ADDRESS);
-  port.write(0xF4);
-  port.write(0x34 | (OSS<<6));
+  port.write(0xF4); //Address the ctrl_meas register (0xF4)
+  port.write(0x34 | (OSS<<6)); //Write OS11_0100 to register. This sets the SCO bit to 1, the meas bits to 10100, and the OSS bits to the given OSS
   port.endTransmission();
 }
 
 void BMP180::finishTemp() {
   finishTempCore();  
   // Wait for conversion, delay time dependent on OSS
+  //Required wait value depends on oversampling, as follows:
+  // oss     internal samples      min wait time  calc wait time 2+(3<<OSS)
+  //   0                1            4.5ms             5
+  //   1                2            7.5ms             8
+  //   2                4           13.5ms            14
+  //   3                8           25.5ms            26
+  //So, all calculated delay times have a 500us margin.
   directTaskManager.schedule(timer_ch,2 + (3<<OSS),0,&finishPresTask,this);
 }
 

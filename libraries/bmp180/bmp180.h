@@ -48,6 +48,7 @@ class BMP180 {
   public:
     Stream *ouf;
     BMP180(TwoWire &Lport);
+    BMP180(TwoWire &Lport, unsigned int Ltimer_ch):BMP180(Lport) {begin(Ltimer_ch);};
     volatile bool ready;
     bool begin(unsigned int Ltimer_ch);
     bool readCalibration();

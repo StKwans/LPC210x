@@ -124,11 +124,4 @@ void HardwareSerial::listen(void) {
 
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
-HardwareSerial Serial(0);
-HardwareSerial Serial1(1);
-
-volatile int f() {
-  return 0x12345678;
-}
-int testInit=f();
 

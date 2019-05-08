@@ -1,7 +1,7 @@
 #include "Task.h"
 #include "Time.h"
 #include "LPC214x.h"
-#include "irq.h"
+#include "vic.h"
 
 TaskManager taskManager;
 
@@ -16,7 +16,7 @@ static const int TIR_CR3=(1<<7);
 
 void TaskManager::begin() {
   //Monopolize the timer's match channel 1 and interrupt
-  IRQHandler::install(IRQHandler::TIMER0+timer,handleTimerISR);
+  VIC.install(VIC.TIMER0+timer,handleTimerISR);
   TMCR(timer) |= (1 << 3);     // On MR1, int but no reset
 }
 

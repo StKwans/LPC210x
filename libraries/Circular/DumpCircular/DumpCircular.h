@@ -14,7 +14,7 @@ public:
   unsigned int errno;
   DumpCircular(Dump& Ld):Circular(sizeof(buf),buf),d(Ld) {};
 
-  virtual bool drain() override {
+  bool drain() override {
     if(tail<=mid) { //We don't have to go around the corner
       d.region(buf+tail,0,mid-tail,d.preferredLen); //Must specify record length, otherwise we get d.region(buf,len,rec_len) instead of d.region(buf,base,len) which doesn't exist
     } else {

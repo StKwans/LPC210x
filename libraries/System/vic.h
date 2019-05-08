@@ -3,9 +3,12 @@
 
 typedef void (*irqHandler)(void);
 
-inline void set_cpsr_c(const int val) {
+//The following ABSOLUTELY MUST be inlined, because it is used in startup code where we don't have a stack yet.
+//When compiled with -O0, inline functions are not inlined
+inline void __attribute__((always_inline)) set_cpsr_c(const int val) {
   asm volatile (" msr  cpsr_c, %0" : /* no outputs */ : "ir" (val)  );	
 }
+//#define set_cpsr_c(val) asm volatile (" msr  cpsr_c, %0" : /* no outputs */ : "ir" (val)  )
 
 inline int get_cpsr_c() {
   int result;

@@ -5,7 +5,7 @@
 #include "float.h"
 #include "Serial.h"
 
-class Packet {
+class Packet:public Print {
 protected: 
   Circular& buf;
   static constexpr Print& Debug=devnull;
@@ -35,7 +35,10 @@ protected:
   //can have a few doc packets before the first metadoc packet, as long as there
   //is readable text in the first few lines of a stream dump.
   virtual bool metaDoc(const char text[]) {Debug.print("metadoc");if(!start(apid_metadoc,"CCSDS self-documentation"))return false;if(!fill(text))return false;if(!finish(apid_metadoc))return false;return true;};
-  virtual bool metaDoc(const char fmtString[], int value) {/*char temp[256];snprintf(temp,256,fmtString,value);return metaDoc(temp);*/return true;};
+  virtual bool metaDoc0(const char text[]) {Debug.print("metadoc");if(!start(apid_metadoc,"CCSDS self-documentation"))return false;if(!fill(text))return false;return true;}
+  virtual bool metaDoc1(const char text[]) {if(!fill(text))return false;if(!finish(apid_metadoc))return false;return true;};
+  virtual bool metaDocDec(const char text0[], int val, const char text1[]) {if(!metaDoc0(text0))return false;print(val,DEC);return metaDoc1(text1);};
+  virtual bool metaDocHex(const char text0[], int val, int digits, const char text1[]) {if(!metaDoc0(text0))return false;print(val,HEX,digits);return metaDoc1(text1);};
   //
   //Note that metadoc is most important just for describing the packet structure
   //in general and doc packets in particular, not necessarily any particular 
@@ -64,7 +67,7 @@ public:
   virtual bool fillu32(uint32_t in /**< [in] value to write in packet*/)=0; ///< Write a 32-bit unsigned integer to the packet
   virtual bool fillu64(uint64_t in /**< [in] value to write in packet*/)=0; ///< Write a 64-bit unsigned integer to the packet
   virtual bool fillfp(fp f /**< [in] value to write in packet*/)=0; ///< Write a floating-point number to the packet
-  virtual bool metaDoc() {}; ///< Write the meta-documentation for this packet format. Should create a series of packets with string payloads, the contents of which document the packet structure in English.
+  virtual bool metaDoc() {return true;}; ///< Write the meta-documentation for this packet format. Should create a series of packets with string payloads, the contents of which document the packet structure in English.
 
   //In general below, we won't use virtual until we have a use-case. Once a
   //derived class needs to override, make that one virtual.
@@ -110,6 +113,8 @@ public:
   bool fillfp (fp          value /**<[in] value to write*/,               const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_float ,fieldName))return false;return fillfp (value    );}; ///<Write and document a floating-point value
   bool fill   (const char* value /**<[in] value to write*/, uint32_t len /**<[in] length of buffer to write*/, const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_binary,fieldName))return false;return fill   (value,len);}; ///<Write and document a binary buffer of arbitrary length.
   bool fill   (const char* value /**<[in] value to write*/,                                                    const char* fieldName /**< [in] Field name. Should be a valid identifier*/) {if(!writeDoc(t_string,fieldName))return false;return fill   (value    );}; ///<Write and document a null-terminated string.
+  void write(unsigned char in) override {fill(in);};
+  using Print::print;
 };
 
 inline bool Packet::fill(const char* in) {
@@ -143,9 +148,8 @@ private:
   char* stashbuf;
   int stashlen;
   int stash_apid;
-  virtual bool writeDoc(uint8_t type, const char* fieldName) override;
-  virtual bool writeDoc(              const char*   pktName) override {return writeDoc(0,pktName);};
-  
+  bool writeDoc(uint8_t type, const char* fieldName) override;
+  bool writeDoc(              const char*   pktName) override {return writeDoc(0,pktName);};
 public:
   using Packet::metaDoc;
   using Packet::filli16;
@@ -157,14 +161,14 @@ public:
   using Packet::fill;
   using Packet::start;
   CCSDS(Circular &Lbuf, uint16_t* Lseq=nullptr, bool *Ldocd=nullptr, char* Lstashbuf=nullptr):Packet(Lbuf),seq(Lseq),lock_apid(0),docd(Ldocd),stashbuf(Lstashbuf),stashlen(0),stash_apid(0) {};
-  virtual bool start(uint16_t apid, uint32_t TC=0xFFFFFFFF) override;
-  virtual bool finish(uint16_t tag) override;
-  virtual bool fill(char in) override;
-  virtual bool fillu16(uint16_t in) override;
-  virtual bool fillu32(uint32_t in) override;
-  virtual bool fillu64(uint64_t in) override;
-  virtual bool fillfp (fp f);
-  virtual bool metaDoc();
+  bool start(uint16_t apid, uint32_t TC=0xFFFFFFFF) override;
+  bool finish(uint16_t tag) override;
+  bool fill(char in) override;
+  bool fillu16(uint16_t in) override;
+  bool fillu32(uint32_t in) override;
+  bool fillu64(uint64_t in) override;
+  bool fillfp (fp f) override;
+  bool metaDoc() override;
 };
 
 #endif

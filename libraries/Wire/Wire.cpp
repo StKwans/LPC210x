@@ -6,8 +6,6 @@ extern "C" {
   #include <inttypes.h>
 }
 
-TwoWire::TwoWire() {}
-
 void TwoWire::begin(unsigned int freq) {
   rxBufferIndex = 0;
   rxBufferLength = 0;

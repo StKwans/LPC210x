@@ -13,33 +13,39 @@ endif
 
 ALLTAR = $(call uniq,$(ALLSRC)) $(call uniq,$(INCDEF)) $(call uniq,$(LD_SCRIPT)) $(call uniq,$(LIBMAKE)) ../libraries/System/Doxyfile.template ../libraries/System/gnuarm_summon.sh $(ATTACH) $(ZPAQDIR)/max.cfg
 
-TAR_EXT = max.zpaq
+CPIO_EXT = .cpio
+ARCHIVE_EXT = tar
+COMPRESS_EXT = max.zpaq
 
-TARBALL = $(TARGET).tar.$(TAR_EXT)
+TARBALL = $(TARGET).$(ARCHIVE_EXT).$(COMPRESS_EXT)
 
 $(TARGET).tar: $(ALLTAR)
 	$(CC) --version --verbose > /tmp/gccversion.txt 2>&1
 	tar chvf $(TARGET).tar -C .. $(sort $(addprefix $(TARGETBASE)/, $(ALLTAR)) /tmp/gccversion.txt)
 
-%.tar.xz: %.tar
+$(TARGET).cpio: $(ALLTAR)
+	$(CC) --version --verbose > /tmp/gccversion.txt 2>&1
+	echo $(sort $(ALLTAR) /tmp/gccversion.txt) | cpio -o > $@
+
+%.$(ARCHIVE_EXT).xz: %.$(ARCHIVE_EXT)
 	xz -kf $<
 
-%.tar.bz2: %.tar
+%.$(ARCHIVE_EXT).bz2: %.$(ARCHIVE_EXT)
 	bzip2 -kf $< 
 
-%.tar.Z: %.tar
+%.$(ARCHIVE_EXT).Z: %.$(ARCHIVE_EXT)
 	compress -c < $< > $@
 
-%.tar.gz: %.tar
+%.$(ARCHIVE_EXT).gz: %.$(ARCHIVE_EXT)
 	gzip < $< > $@
 
-%.tar.gz9: %.tar
+%.$(ARCHIVE_EXT).gz9: %.$(ARCHIVE_EXT)
 	gzip -9 < $< > $@
 
-%.tar.lzo: %.tar
+%.$(ARCHIVE_EXT).lzo: %.$(ARCHIVE_EXT)
 	lzop -f $<
 
-%.tar.lz: %.tar
+%.$(ARCHIVE_EXT).lz: %.$(ARCHIVE_EXT)
 	lzip -kf $<
 
 %.zip: %.tar
@@ -58,10 +64,10 @@ $(TARGET).7z: $(TARGET).tar
 	7z a ../$(TARGET).7z *; 
 	$(REMOVE) -rf $(@).tmpdir
 
-%.tar.mid.zpaq: %.tar
+%.$(ARCHIVE_EXT).mid.zpaq: %.$(ARCHIVE_EXT)
 	zpaq tc$(ZPAQDIR)/mid.cfg $@ $<
 
-%.tar.max.zpaq: %.tar
+%.$(ARCHIVE_EXT).max.zpaq: %.$(ARCHIVE_EXT)
 	zpaq tc$(ZPAQDIR)/max.cfg $@ $<
 
 TEST_ARCHIVE = $(TARGET).tar.xz $(TARGET).tar.bz2 $(TARGET).tar.Z $(TARGET).tar.gz $(TARGET).tar.gz9 $(TARGET).tar.lzo $(TARGET).tar.lz $(TARGET).zip $(TARGET).7z $(TARGET).tar.mid.zpaq $(TARGET).tar.max.zpaq

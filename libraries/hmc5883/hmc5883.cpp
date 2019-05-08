@@ -46,10 +46,28 @@ int16_t HMC5883::read16(uint8_t address) {
   return (int16_t) msb<<8 | lsb;
 }
 
-void HMC5883::read(int16_t& x, int16_t& y, int16_t& z) {
+void HMC5883::read(int16_t& x, int16_t& z, int16_t& y) {
   x=read16(3);
-  y=read16(5);
-  z=read16(7);
+  z=read16(5);
+  y=read16(7);
+}
+
+void HMC5883::read(int16_t& x, int16_t& y, int16_t& z, uint8_t& status) {
+  port.beginTransmission(ADDRESS);
+  port.write(3);
+  port.endTransmission();
+  
+  port.requestFrom(ADDRESS, 7);
+  uint8_t msb = port.read();
+  uint8_t lsb = port.read();
+  x=(int16_t) msb<<8 | lsb;
+  msb = port.read();
+  lsb = port.read();
+  z=(int16_t) msb<<8 | lsb;
+  msb = port.read();
+  lsb = port.read();
+  y=(int16_t) msb<<8 | lsb;
+  status=port.read();
 }
 
 void HMC5883::whoami(char* id) {
@@ -60,13 +78,13 @@ void HMC5883::whoami(char* id) {
 }
 
 bool HMC5883::fillConfig(Packet& ccsds) {
-  if(!ccsds.fill(read( 0))) return false;
-  if(!ccsds.fill(read( 1))) return false;
-  if(!ccsds.fill(read( 2))) return false;
-  if(!ccsds.fill(read( 9))) return false;
-  if(!ccsds.fill(read(10))) return false;
-  if(!ccsds.fill(read(11))) return false;
-  if(!ccsds.fill(read(12))) return false;
+  if(!ccsds.fill(read( 0),"ConfigA")) return false;
+  if(!ccsds.fill(read( 1),"ConfigB")) return false;
+  if(!ccsds.fill(read( 2),"Mode"   )) return false;
+  if(!ccsds.fill(read( 9),"Status" )) return false;
+  if(!ccsds.fill(read(10),"IdA"    )) return false;
+  if(!ccsds.fill(read(11),"IdB"    )) return false;
+  if(!ccsds.fill(read(12),"IdC"    )) return false;
   return true;
 }
 

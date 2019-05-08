@@ -272,11 +272,15 @@ bool CCSDS::metaDoc() {
 		   "wraps in 14 bits."))return false;
   if(!metaDoc("Next 16-bit number is length of packet minus 7 since every packet "
 		   "has a 6-byte header and must have at least 1 byte of payload."))return false;
-  //metaDoc("Packets of apid %d encapsulates a python 3 script which can decode this stream into "
-  //                 "separate CSV streams for each apid. The apid and length are correct for this "
-  //                 "type of packet, but other flags may not be.",Apids::parse))return false;
-  if(!metaDoc("Packets of apid %d contain this English meta-documentation. ",apid_metadoc))return false;
-  if(!metaDoc("Packets of apid %d describe the detailed format of the other packets.",apid_doc))return false;
+  /*
+  if(!metaDoc0("Packets of apid ")) return false;
+  print(Apids::parse,DEC);
+  if(!metaDoc1(" encapsulates a python 3 script which can decode this stream into "
+                   "separate CSV streams for each apid. The apid and length are correct for this "
+                   "type of packet, but other flags may not be."))return false;
+  */
+  if(!metaDocDec("Packets of apid ",apid_metadoc," contain this English meta-documentation. "))return false;
+  if(!metaDocDec("Packets of apid ",apid_doc," describe the detailed format of the other packets."))return false;
   if(!metaDoc("In those packets, the first field in the payload is a 16-bit number, the "
 		  "packet APID being described."))return false;
   if(!metaDoc("The second field in the payload is a 16-bit number, the position in the "
@@ -290,16 +294,16 @@ bool CCSDS::metaDoc() {
 		  "follows from the first packet of this APID to be written"))return false;
   if(!metaDoc("The third field in the payload is an 8-bit number, the type of the field"
 		  "from the following table: "))return false;
-  if(!metaDoc("0x%02x: This name describes the whole packet, not any one field",0))return false;
-  if(!metaDoc("0x%02x: t_u8 (8-bit unsigned integer)",t_u8))return false;
-  if(!metaDoc("0x%02x: t_i16 (16-bit signed integer)",t_i16))return false;
-  if(!metaDoc("0x%02x: t_i32 (32-bit signed integer)",t_i32))return false;
-  if(!metaDoc("0x%02x: t_u16 (16-bit unsigned integer)",t_u16))return false;
-  if(!metaDoc("0x%02x: t_u32 (32-bit unsigned integer)",t_u32))return false;
-  if(!metaDoc("0x%02x: t_float (32-bit IEEE-754 floating point)",t_float))return false;
-  if(!metaDoc("0x%02x: t_double (64-bit IEEE-754 floating point)",t_double))return false;
-  if(!metaDoc("0x%02x: t_string (UTF-8 text)",t_string))return false;
-  if(!metaDoc("0x%02x: t_binary (unformatted data dump)",t_binary))return false;
+  if(!metaDocHex("0x",0,2,": This name describes the whole packet, not any one field"))return false;
+  if(!metaDocHex("0x",t_u8    ,2,": t_u8 (8-bit unsigned integer)"))return false;
+  if(!metaDocHex("0x",t_i16   ,2,": t_i16 (16-bit signed integer)"))return false;
+  if(!metaDocHex("0x",t_i32   ,2,": t_i32 (32-bit signed integer)"))return false;
+  if(!metaDocHex("0x",t_u16   ,2,": t_u16 (16-bit unsigned integer)"))return false;
+  if(!metaDocHex("0x",t_u32   ,2,": t_u32 (32-bit unsigned integer)"))return false;
+  if(!metaDocHex("0x",t_float ,2,": t_float (32-bit IEEE-754 floating point)"))return false;
+  if(!metaDocHex("0x",t_double,2,": t_double (64-bit IEEE-754 floating point)"))return false;
+  if(!metaDocHex("0x",t_string,2,": t_string (UTF-8 text)"))return false;
+  if(!metaDocHex("0x",t_binary,2,": t_binary (unformatted data dump)"))return false;
   if(!metaDoc("The fourth field is a UTF-8 text string with the name of the field."))return false;
   if(!metaDoc("For all strings and binary data, no length information is included."))return false;
   if(!metaDoc("If the string or binary is the only such field in the packet, its "

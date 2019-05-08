@@ -44,10 +44,10 @@ private:
   void address(int ia);
 public:
   IntelHex(Print& Lout):Dump(Lout,32) {};
-  virtual void line(const char* start0, const char* start1, int base, int len0, int len1);
-  virtual void begin();
-  virtual void end();
-  virtual void line(const char* start, int base, int len);
+  void line(const char* start0, const char* start1, int base, int len0, int len1) override;
+  void begin() override;
+  void end() override;
+  void line(const char* start, int base, int len) override;
 };
 
 //Converts 4 bytes of binary into 5 printable ASCII characters from 33 (!) to 117 (u)
@@ -59,14 +59,14 @@ private:
 public:
   Base85(Print& Lout):Dump(Lout,64) {};
   Base85(Print& Lout, int LpreferredLen):Dump(Lout,LpreferredLen) {};
-  virtual void line(const char* start, int base, int len);
+  void line(const char* start, int base, int len) override;
 };
 
 class Hd: public Dump {
 public:
-  virtual void line(const char* start0, const char* start1, int base, int len0, int len1);
+  void line(const char* start0, const char* start1, int base, int len0, int len1) override;
   Hd(Print& Lout):Dump(Lout,16) {};
   Hd(Print& Lout, int LpreferredLen):Dump(Lout,LpreferredLen) {};
-  virtual void line(const char* start, int base, int len);
+  void line(const char* start, int base, int len) override;
 };
 #endif

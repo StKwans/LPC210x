@@ -47,14 +47,16 @@ class HardwareSerial: public Stream {
       rx(sizeof(rxbuf),rxbuf),
 #endif
       port(Lport) {};
+    HardwareSerial(int Lport, unsigned int baud):HardwareSerial(Lport) {begin(baud);};
+    HardwareSerial(int Lport, unsigned int baud, const char* msg):HardwareSerial(Lport,baud) {println(msg);};
     void begin(unsigned int baud);
     void end();
     void listen();
-    virtual int available(void);
-    virtual int peek(void);
-    virtual int read(void);
-    virtual void flush(void);
-    virtual void write(uint8_t);
+    int available(void) override;
+    int peek(void) override;
+    int read(void) override;
+    void flush(void) override;
+    void write(uint8_t) override;
     using Print::write; // pull in write(str) and write(buf, size) from Print
 };
 
@@ -102,7 +104,7 @@ inline int HardwareSerial::peek(void) {
 #endif
 }
 
-
+//These are predeclared so that everyone can use them, but must be defined manually.
 extern HardwareSerial Serial;
 extern HardwareSerial Serial1;
 extern int testInit;

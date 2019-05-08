@@ -71,7 +71,6 @@ endif
 
 CDEFS += -DLPC2148
 
-
 # MCU name and submodel
 MCU      = arm7tdmi-s
 SUBMDL   = LPC2148
@@ -130,7 +129,7 @@ ADEFS +=  -D$(RUN_MODE)
 CFLAGS = $(DEBUG) -D$(HARDWARE)
 CFLAGS += $(CDEFS) $(CINCS)
 CFLAGS += $(OPT)
-CFLAGS += -Wall -Wcast-align
+CFLAGS += -Wall -Wcast-align -Wsuggest-override
 CFLAGS += -Wpointer-arith -Wswitch
 CFLAGS += -Wredundant-decls -Wreturn-type -Wshadow -Wunused -Wno-attributes
 CFLAGS += -Wa,-adhlns=$(subst $(suffix $<),.lst,$<)
