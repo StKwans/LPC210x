@@ -1,4 +1,4 @@
-#include "LPC214x.h"
+#include "scb.h"
 #include "vic.h"
 #include "hardware_stack.h"
 
@@ -126,7 +126,7 @@ vectorg(void) {
       ".word _Z12PAbt_Handlerv\n\t"   //PAbt
       ".word _Z12DAbt_Handlerv\n\t"   //DAbt
       ".word 0\n\t"               //Reserved (hole in vector table above)
-      ".word _ZN9VICDriver11IRQ_WrapperEv\n\t"     //IRQ (wrapper so that normal C functions can be installed in VIC)
+      ".word IRQ_Wrapper\n\t"     //IRQ (wrapper so that normal C functions can be installed in VIC)
       ".word _Z11FIQ_Handlerv"); //FIQ
 }
 
@@ -193,5 +193,3 @@ void Reset_Handler() {
 //Directly call user's loop();
   for(;;) loop();
 }
-
-
