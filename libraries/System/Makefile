@@ -1,26 +1,24 @@
 # List C++ source files here.
 # use file-extension cpp for C++-files (use extension .cpp)
 #Used by everything, but doesn't need to be first. Section definitions are
-CPPSRC += ../libraries/System/Startup.cpp
-CPPSRC += ../libraries/System/hardware_stack.cpp
+#CPPSRC += ../libraries/System/hardware_stack.cpp
 # Every Loginator sketch uses its own main.cpp, so we reference it here. Link it last so that it can use all
 # staticaly declared, dynamically initialized objects.
 CPPSRC += main.cpp
 
 #INIT_CPPSRC - Solution to "static initialization fiasco". Initialization (especially dynamic initialization)
 #is ordered in one translation unit and in an unspecified order between translation units, but our linker script
-#specifies that dinamic initialization code for each translation unit is called in order that the translation
+#specifies that dynamic initialization code for each translation unit is called in order that the translation
 #units are specified in the linker command line. These routines will be linked first, so that any constructors
 #in any translation unit can use these secure in the knowledge that they are already initialized. All other
 #initializers are ultimately determined by the Makefile for each library and the order that the library Makefiles
 #are included in the top-level program Makefile. Only include things in here that actually need to be initialized
 #before anything else.
 
-#Set up VIC first to catch any spurious interrupts.
-INIT_CPPSRC  = ../libraries/System/vic.cpp
+INIT_CPPSRC  = ../libraries/System/Startup.cpp
 #Timer doesn't depend on VIC, but just in case, we do VIC first. Function delay() depends on PCLK being set right.
 #Since delay() is pretty low-level, we want it available to other constructors, but VIC construction doesn't use it.
-INIT_CPPSRC += ../libraries/System/Time.cpp
+#INIT_CPPSRC += ../libraries/System/Time.cpp
 
 LIBMAKE+=Makefile ../libraries/System/Makefile
 
@@ -32,7 +30,7 @@ TARGET=$(TARGETBASE)
 endif
 
 ABI = arm-none-eabi
-LD_SCRIPT = ../libraries/System/lowmem_cpp_eabi.ld
+LD_SCRIPT = ../libraries/System/lpc2102.ld
 
 reduce = $(if $(strip $2),$(call reduce,$1,$(wordlist 2,$(words $2),$2),$(call $1,$(firstword $2),$3)),$3)
 
@@ -85,7 +83,7 @@ THUMB_IW = -mthumb-interwork
 # Optimization level, can be [0, 1, 2, 3, s]. 
 # 0 = turn off optimization. s = optimize for size.
 # (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
-OPT = -Og -fomit-frame-pointer
+OPT = -O0 -fomit-frame-pointer
 
 ## Using the Atmel AT91_lib produces warning with
 ## the default warning-levels. 
@@ -95,7 +93,7 @@ AT91LIBNOWARN = no
 
 # Debugging format.
 # Needed in order to get source code listings in .lst and .lss files
-DEBUG = -gstabs
+DEBUG = -g
 #DEBUG = -gdwarf-2
 
 # List any extra directories to look for include files here.
@@ -354,7 +352,7 @@ $(TARGET).bin: $(TARGET).elf
 	@echo
 	@echo $(MSG_EXTENDED_LISTING) $@
 	$(OBJDUMP) -h $< > $@
-	$(OBJDUMP) -S -j .text $< >> $@
+	$(OBJDUMP) -S -j .text $< | c++filt >> $@
 	$(OBJDUMP) -s -j .vtable -j .rodata -j .ctors  -j .data $< >> $@
 	$(OBJDUMP) -t $< | grep ^[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f] | sort >> $@
 
