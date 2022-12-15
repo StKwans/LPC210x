@@ -1,7 +1,8 @@
-#ifndef TIME_H
-#define TIME_H
+#ifndef scb_h
+#define scb_h
 
 #include <cinttypes>
+#include "gpio.h"
 
 #ifndef FOSC
 #define FOSC 12'000'000
@@ -73,12 +74,12 @@ class SystemControlBlock {
     PLLDriver() {
       init_pll();
     }
-    uint32_t multiplier() {return (PLLSTAT() & 0x1F)+1;}
-    uint32_t divider()    {return 1<<((PLLSTAT() >> 5) & 0x03);}
-    bool enabled()        {return (PLLSTAT() >> 8) & 0x01;}
-    bool connected()      {return (PLLSTAT() >> 9) & 0x01;}
-    bool locked()         {return (PLLSTAT() >>10) & 0x01;}
-    uint32_t FCCO()       {return FOSC*2*multiplier()*divider();}
+    static uint32_t multiplier() {return (PLLSTAT() & 0x1F)+1;}
+    static uint32_t divider()    {return 1<<((PLLSTAT() >> 5) & 0x03);}
+    static bool enabled()        {return (PLLSTAT() >> 8) & 0x01;}
+    static bool connected()      {return (PLLSTAT() >> 9) & 0x01;}
+    static bool locked()         {return (PLLSTAT() >>10) & 0x01;}
+    static uint32_t FCCO()       {return FOSC*2*multiplier()*divider();}
   };
 
   static PLLDriver PLL;
