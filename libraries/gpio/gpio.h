@@ -31,6 +31,14 @@ private:
   static volatile uint32_t& FIOSET()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x18));}
   static volatile uint32_t& FIOCLR()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x1C));}
 public:
+  static void direct_blink() {
+    SCS()=1;
+    FIODIR()=(1<<13);
+    for(;;) {
+      for(int i=0;i<1'000'000;i++) FIOSET()=(1<<13);
+      for(int i=0;i<1'000'000;i++) FIOCLR()=(1<<13);
+    }
+  }
   GPIODriver() {
     SCS()=1;
   }
