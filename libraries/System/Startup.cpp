@@ -97,7 +97,8 @@ just zero? That would cause a spontaneous reset on an ARM processor, and "Thou
 shalt not follow the NULL pointer, for chaos and madness await thee at its 
 end." But, if you call an abstract method, you get what you deserve.
 Defined as weak so that if you want to write a function that beats the 
-programmer about the head when called, you can. */
+programmer about the head when called, you can. Defined as extern C
+because the compiler generates references to this exact function name. */
 extern "C" void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) __cxa_pure_virtual();
 
 //Sketch main routines. We actually put the symbol weakness to work here - we
@@ -117,7 +118,7 @@ vectorg(void) {
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
-      ".word 0xb8a06f60\n\t" //NXP checksum, constant as long as the other 7 instructions in first 8 are constant
+      ".word 0xb8a06f68\n\t" //NXP checksum, constant as long as the other 7 instructions in first 8 are constant
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
       ".word _Z13Reset_Handlerv\n\t"   //Startup code location
@@ -132,10 +133,16 @@ vectorg(void) {
 
 //These two routines ABSOLUTELY MUST be inlined. Without the __attribute__((always_inline)) we don't get inlined at optimization level -O0
 static inline void __attribute__((always_inline)) set_sp(const int* val) {
+  // Must be inlined since we monkey with the stack pointer and are likely to lose our
+  // return address. ARM chips use a link register which doesn't hit the stack,
+  // but the compiler may do so in a function prolog/epilog.
   asm volatile (" mov  sp, %0" : : "r" (val));
 }
 
 static inline void __attribute__((always_inline)) setModeStack(int stack[], const int size, const int modeflags) {
+  // Must be inlined since we monkey with the stack pointer and are likely to lose our
+  // return address. ARM chips use a link register which doesn't hit the stack,
+  // but the compiler may do so in a function prolog/epilog.
   set_cpsr_c(modeflags);
   set_sp(stack+size/sizeof(int));
   for(unsigned int i=0;i<(size/sizeof(int));i++) stack[i]=stackPattern;
