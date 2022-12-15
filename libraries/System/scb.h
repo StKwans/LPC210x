@@ -45,12 +45,15 @@ class SystemControlBlock {
     number. May be between 1 and 32, but in practice must not exceed 5 with a 12MHz
     crystal.
     */
-    PLLDriver() {
+    static const uint32_t FCCOmin=156'000'000;
+    static const uint32_t FCCOmax=320'000'000;
+    static void init_pll() {
       //Figure out N, exponent for PLL divider value, P=2^N. Intermediate frequency FCCO will be
       //FOSC*M*2*P=FOSC*M*2*2^N, and must be between 156MHz and 320MHz. This selects the lowest
       //N which satisfies the frequency constraint
-      unsigned int N=0;
-      while(FOSC*PLL_MULTIPLIER*2*(1<<N)<156'000'000) N++;
+
+      unsigned int N=1;
+      //while(FOSC*PLL_MULTIPLIER*2*(1<<N)<FCCOmin) N++;
       // Set Multiplier and Divider values
       PLLCFG()=(PLL_MULTIPLIER-1)|(N<<5);
       feed();
@@ -62,9 +65,13 @@ class SystemControlBlock {
       // Wait for the PLL to lock to set frequency
       while(!locked()) {}
 
+      GPIODriver::direct_blink();
       // Connect the PLL as the clock source
       PLLCON()=0x3;
       feed();
+    }
+    PLLDriver() {
+      init_pll();
     }
     uint32_t multiplier() {return (PLLSTAT() & 0x1F)+1;}
     uint32_t divider()    {return 1<<((PLLSTAT() >> 5) & 0x03);}
