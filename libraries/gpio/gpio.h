@@ -1,66 +1,63 @@
 #ifndef gpio_h
 #define gpio_h
 
-#include "LPC214x.h"
-#include "Time.h"
+#include "scb.h"
 
-inline void set_pin(int pin, int mode) {
-  int mask=~(0x3 << ((pin & 0x0F)<<1));
-  int val=mode << ((pin & 0x0F)<<1);
-  if(pin>=16) {
-    PINSEL1=(PINSEL1 & mask) | val;
-  } else {
-    PINSEL0=(PINSEL0 & mask) | val;
+class GPIODriver {
+  /** Notes:
+   * Pin mode is controlled by the Pin Connect Block, with driver in pinconnect.h . However,
+   * in the LPC210x, without exception the reset state of each pin is GPIO. Therefore we don't
+   * try to control the pin mode here, and rely on other drivers to set and reset the mode
+   * when they go in and out of scope.
+   *
+   * The fast IO block can do more complicated things, like:
+   *  * Set a mask so that only certain bits are affected by further operations
+   *  * Access multiple pins simultaneously, for either read or write
+   *  * Access the registers in byte or halfword mode
+   * Upon demand, this driver will add features to support such hardware features.
+   * Until then, we use the Arduino model of pinMode()/digitalRead()/digitalWrite().
+   * Ambient functions are provided that delegate to an ambient object of this class.
+   */
+private:
+  // Even though SCS is technically in the system control block, it only has one bit used
+  // and that one bit is solely used to control legacy/fast GPIO support. So, we will declare
+  // and use that register here, instead of in the SCB.
+  static volatile uint32_t& SCS()     {return (*(volatile uint32_t*)(0xE01F'C1A0));}
+  // Everything will use the fast GPIO from here on.
+  static const uint32_t FIO_BASE_ADDR=0x3FFF'C000;
+  static volatile uint32_t& FIODIR()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x00));}
+  static volatile uint32_t& FIOMASK() {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x10));}
+  static volatile uint32_t& FIOPIN()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x14));}
+  static volatile uint32_t& FIOSET()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x18));}
+  static volatile uint32_t& FIOCLR()  {return (*(volatile uint32_t*)(FIO_BASE_ADDR + 0x1C));}
+public:
+  GPIODriver() {
+    SCS()=1;
   }
-}
-
-inline void gpio_set_write(int pin) {
-  IODIR0|= (1 << pin); //Set the selected bit, leave the others alone
-}
-
-inline void gpio_set_read(int pin) {
-  IODIR0&=~ (1 << pin); //Clear the selected bit, leave the others alone
-}
-
-inline void set_pin(int pin, int mode, int write) {
-  set_pin(pin,mode);
-  if(write) {
-    gpio_set_write(pin);
-  } else {
-    gpio_set_read(pin);
+  void pinMode(int pinNumber, bool output) {
+    if(output) {
+      FIODIR()|= (1 << pinNumber); //Set the selected bit, leave the others alone
+    } else {
+      FIODIR()&=~ (1 << pinNumber); //Clear the selected bit, leave the others alone
+    }
   }
-}
-
-inline int get_pin(int pin) {
-  if(pin>=16) {
-    return PINSEL1>>(pin & 0x0F) & 0x03;
-  } else {
-    return PINSEL0>>(pin & 0x0F) & 0x03;
+  void digitalWrite(int pinNumber, bool high) {
+    if(high) {
+      FIOSET()=(1<<pinNumber);
+    } else {
+      FIOCLR()=(1<<pinNumber);
+    }
   }
-}
-
-inline void gpio_write(int pin, int level) {
-  if(level==0) {
-    IOCLR0=(1<<pin);
-  } else {
-    IOSET0=(1<<pin);
+  bool digitalRead(int pinNumber) {
+    return (FIOPIN()>>pinNumber) & 1;
   }
-}
+};
 
-inline int gpio_read(int pin) {
-  return (IOPIN0 >> pin) & 1; 
-}
-
-extern const int light_pin[];
-
-inline void set_light(int statnum, int on) {
-  set_pin(light_pin[statnum],0,1); //Set pin to GPIO write
-  gpio_write(light_pin[statnum],on==0); //low if on, high if off
-}
-
-void blinklock(int blinkcode);
-void flicker(int on);
-void flicker(void);
+inline GPIODriver GPIO;
+// Arduino uses ambient functions. Just delegate these to the GPIO driver.
+inline void pinMode(int pinNumber, bool output) {GPIO.pinMode(pinNumber,output);}
+inline bool digitalRead(int pinNumber) {return GPIO.digitalRead(pinNumber);}
+inline void digitalWrite(int pinNumber, bool high) {GPIO.digitalWrite(pinNumber,high);}
 
 #endif
 
