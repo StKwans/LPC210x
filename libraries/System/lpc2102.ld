@@ -112,7 +112,6 @@ in rom but relocated to ram.  */
         *(COMMON)
         . = ALIGN(16);
         bss_end = . ;
-        ram_end = . ; /* End of statically allocated memory */
     }
     > RAM
 
@@ -127,6 +126,9 @@ in rom but relocated to ram.  */
         . = ALIGN(16);
     }
     > RAM
+
+    /* Physical end of RAM */
+    ram_end = ORIGIN(RAM)+LENGTH(RAM);
 
     /* Stabs debugging sections.  */
     .stab          0 : { *(.stab) }
