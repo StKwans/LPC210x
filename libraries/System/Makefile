@@ -83,7 +83,7 @@ THUMB_IW = -mthumb-interwork
 # Optimization level, can be [0, 1, 2, 3, s]. 
 # 0 = turn off optimization. s = optimize for size.
 # (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
-OPT = -O0 -fomit-frame-pointer
+OPT = -Og -fomit-frame-pointer
 
 ## Using the Atmel AT91_lib produces warning with
 ## the default warning-levels. 
@@ -91,8 +91,9 @@ OPT = -O0 -fomit-frame-pointer
 #AT91LIBNOWARN = yes
 AT91LIBNOWARN = no
 
-# Debugging format.
-# Needed in order to get source code listings in .lst and .lss files
+# Include debugging info in final ELF. Needed in order to get
+# source code listings in .lst and .lss files. Note that this
+# does *not* end up in the binary that is sent to the chip.
 DEBUG = -g
 #DEBUG = -gdwarf-2
 
