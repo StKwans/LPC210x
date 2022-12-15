@@ -118,7 +118,7 @@ vectorg(void) {
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
-      ".word 0xb8a06f68\n\t" //NXP checksum, constant as long as the other 7 instructions in first 8 are constant
+      ".word 0xb8a06f58\n\t" //NXP checksum, constant as long as the other 7 instructions in first 8 are constant
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
       ".word _Z13Reset_Handlerv\n\t"   //Startup code location
