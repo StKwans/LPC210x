@@ -21,7 +21,7 @@ SECTIONS
     {
         btext = .;
         KEEP(*(.vectors))          /* required, keep the vectors where they belong */ 
-	    *Startup.o(.text .text.*)  /* Just customary, put startup code close to front of section */
+	    *Startup.o(.text._Z13Reset_Handlerv .text .text.*)  /* Just customary, put startup code close to front of section */
         *(.text .text.*)           /* remaining code */
         *(.gnu.linkonce.t.*)
         . = ALIGN(16);
