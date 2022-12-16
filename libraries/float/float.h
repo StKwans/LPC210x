@@ -1,5 +1,5 @@
-#ifndef FLOAT_H
-#define FLOAT_H
+#ifndef float_h
+#define float_h
 
 typedef float fp;
 
