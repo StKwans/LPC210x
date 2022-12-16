@@ -27,17 +27,17 @@ class SystemControlBlock {
     static volatile uint32_t& PLLCFG() {return (*(volatile uint32_t*)(SCB_BASE_ADDR + 0x84));}
     static volatile uint32_t& PLLSTAT(){return (*(volatile uint32_t*)(SCB_BASE_ADDR + 0x88));}
     static volatile uint32_t& PLLFEED(){return (*(volatile uint32_t*)(SCB_BASE_ADDR + 0x8C));}
-    //The docs say that a successful feed must consist of two writes with no
-    //intervening APB cycles. Use asm to make sure that it is done with two
-    //intervening instructions.
-    static void feed() {
+    static void __attribute__((always_inline)) feed() {
+      //The docs say that a successful feed must consist of two writes with no
+      //intervening APB cycles. Use asm to make sure that it is done with two
+      //intervening instructions. Intended to act like the following C code:
+      //  PLLFEED(channel)=0xAA;
+      //  PLLFEED(channel)=0x55;
       asm("mov r0, %0\n\t"
           "mov r1,#0xAA\n\t"
           "mov r2,#0x55\n\t"
           "str r1,[r0]\n\t"
           "str r2,[r0]\n\t" : :"r"(&PLLFEED()):"r0","r1","r2");
-      //  PLLFEED(channel)=0xAA;
-      //  PLLFEED(channel)=0x55;
     }
 
   public:
@@ -66,10 +66,9 @@ class SystemControlBlock {
       // Wait for the PLL to lock to set frequency
       while(!locked()) {}
 
-      GPIODriver::direct_blink();
-      // Connect the PLL as the clock source
-      PLLCON()=0x3;
-      feed();
+      // Connect the PLL as the clock source. This doesn't actually work :(
+      //PLLCON()=0x3;
+      //feed();
     }
     PLLDriver() {
       init_pll();
