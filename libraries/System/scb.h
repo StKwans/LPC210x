@@ -81,19 +81,23 @@ class SystemControlBlock {
     static uint32_t FCCO()       {return FOSC*2*multiplier()*divider();}
   };
 
-  static PLLDriver PLL;
+  PLLDriver PLL;
 private:
-  static void measurePCLK() {
-    CCLK=FOSC*PLL.multiplier();
+  void measurePCLK() {
+    if(PLL.connected()) {
+      _CCLK = FOSC * PLL.multiplier();
+    } else {
+      _CCLK=FOSC;
+    }
     switch (VPBDIV() & 0x03) {
       case 0:
-        PCLK=CCLK/4;
+        _PCLK=_CCLK/4;
         break;
       case 1:
-        PCLK=CCLK;
+        _PCLK=_CCLK;
         break;
       case 2:
-        PCLK=CCLK/2;
+        _PCLK=_CCLK/2;
         break;
       case 3:
         break;
@@ -107,8 +111,10 @@ private:
   /* VPB Divider (CCLK is divided by this to get PCLK) */
   static volatile uint32_t& VPBDIV() {return (*(volatile uint32_t*)(SCB_BASE_ADDR + 0x100));}
 
+  uint32_t _PCLK,_CCLK;
+
 public:
-  static uint32_t PCLK,CCLK,timerInterval;
+  // Make these internal variables since this class must be a singleton (there's only one SCB to actually control).
   SystemControlBlock() {
     // Setting peripheral Clock (pclk) to System Clock (cclk)
     VPBDIV()=0x1;
@@ -120,12 +126,11 @@ public:
     //Make sure PCLK and CCLK variables are correct
     measurePCLK();
   }
+  uint32_t PCLK() {return _PCLK;}
+  uint32_t CCLK() {return _CCLK;}
 };
 
 
-inline uint32_t SystemControlBlock::PCLK;
-inline uint32_t SystemControlBlock::CCLK;
-inline SystemControlBlock::PLLDriver SystemControlBlock::PLL;
 inline SystemControlBlock SCB;
 #endif
 
