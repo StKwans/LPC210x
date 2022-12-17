@@ -55,14 +55,21 @@ private:
   void printNumber(uint64_t n, int base=DEC, int digits=0) {
     unsigned char buf[8 * sizeof(uint64_t)];
     size_t i = 0;
-
+    char pad;
+    if(digits>0) {
+      pad='0';
+    } else {
+      pad=' ';
+      digits=-digits;
+    }
     if (n == 0) {
-      for(i=0;i<(digits>0?digits:1);i++) print('0');
+      for(i=0;i<(digits>0?digits:1);i++) print(pad);
       return;
     }
 
     while (n > 0||digits>0) {
       buf[i] = n % base;
+      if(buf[i]>0) pad='0';
       i++;
       digits--;
       n /= base;
