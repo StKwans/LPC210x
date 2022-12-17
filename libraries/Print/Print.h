@@ -34,9 +34,9 @@ const int BYTE=0;
 
 class Print {
 private:
-  void printNumber(unsigned int n, int base, int digits) {
-    unsigned char buf[8 * sizeof(unsigned int)];
-    unsigned int i = 0;
+  void printNumber(uint32_t n, int base=DEC, int digits=0) {
+    unsigned char buf[8 * sizeof(uint32_t)];
+    size_t i = 0;
 
     if (n == 0) {
       for(i=0;i<(digits>0?digits:1);i++) print('0');
@@ -52,9 +52,9 @@ private:
 
     for (; i > 0; i--) print((char) (buf[i - 1] < 10 ?'0' + buf[i - 1]:'A' + buf[i - 1] - 10));
   }
-  void printNumber(unsigned long long n, int base, int digits) {
-    unsigned char buf[8 * sizeof(unsigned long long)];
-    unsigned int i = 0;
+  void printNumber(uint64_t n, int base=DEC, int digits=0) {
+    unsigned char buf[8 * sizeof(uint64_t)];
+    size_t i = 0;
 
     if (n == 0) {
       for(i=0;i<(digits>0?digits:1);i++) print('0');
@@ -70,6 +70,7 @@ private:
 
     for (; i > 0; i--) print((char) (buf[i - 1] < 10 ?'0' + buf[i - 1]:'A' + buf[i - 1] - 10));
   }
+
   void printFloat(float number, unsigned char digits) {
     // Handle negative numbers
     if (number < 0.0) {
@@ -78,7 +79,7 @@ private:
     }
 
     // Round correctly so that print(1.999, 2) prints as "2.00"
-    fp rounding = 0.5;
+    float rounding = 0.5;
     for (unsigned char i=0; i<digits; ++i) {
       rounding /= 10.0;
     }
@@ -86,8 +87,8 @@ private:
     number += rounding;
 
     // Extract the integer part of the number and print it
-    unsigned int int_part = (unsigned int)number;
-    fp remainder = number - (fp)int_part;
+    uint32_t int_part = (uint32_t)number;
+    float remainder = number - (float)int_part;
     print(int_part);
 
     // Print the decimal point, but only if there are digits beyond
@@ -98,7 +99,7 @@ private:
     // Extract digits from the remainder one at a time
     while (digits-- > 0) {
       remainder *= 10.0;
-      unsigned int toPrint = (unsigned int)(remainder);
+      uint32_t toPrint = (uint32_t)(remainder);
       print(toPrint);
       remainder -= toPrint;
     }
@@ -122,7 +123,7 @@ public:
     print((int) c, base,digits);
   };
   void print(unsigned char b, int base=BYTE,int digits=0){
-    print((unsigned int) b, base,digits);
+    print((uint32_t) b, base,digits);
   };
   void print(int n, int base=DEC, int digits=0) {
     if (base == 0) {
@@ -132,17 +133,17 @@ public:
         print('-');
         n = -n;
       }
-      printNumber((unsigned int)n, 10, digits);
+      printNumber((uint32_t)n, 10, digits);
     } else {
-      printNumber((unsigned int)n, base,digits);
+      printNumber((uint32_t)n, base,digits);
     }
   }
-  void print(unsigned int n, int base=DEC, int digits=0) {
+  void print(uint32_t n, int base=DEC, int digits=0) {
     if (base == 0) write(n);
     else printNumber(n, base, digits);
   }
 
-  void print(long long n, int base=DEC, int digits=0) {
+  void print(int64_t n, int base=DEC, int digits=0) {
     if (base == 0) {
       write(n);
     } else if (base == 10) {
@@ -150,16 +151,16 @@ public:
         print('-');
         n = -n;
       }
-      printNumber((unsigned long long)n, 10, digits);
+      printNumber((uint64_t)n, 10, digits);
     } else {
-      printNumber((unsigned long long)n, base, digits);
+      printNumber((uint64_t)n, base, digits);
     }
   }
-  void print(unsigned long long int n, int base= DEC,int digits=0) {
+  void print(uint64_t n, int base= DEC,int digits=0) {
     if (base == 0) write(n);
     else printNumber(n, base);
   };
-  void print(fp n, int digits=2) {
+  void print(float n, int digits=2) {
     printFloat(n, digits);
   };
 
@@ -179,7 +180,7 @@ public:
     print(n, base,digits);
     println();
   }
-  void println(unsigned int n, int base=DEC, int digits=0) {
+  void println(uint32_t n, int base=DEC, int digits=0) {
     print(n, base, digits);
     println();
   }
