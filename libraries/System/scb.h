@@ -2,6 +2,7 @@
 #define scb_h
 
 #include <cinttypes>
+#include <cstddef>
 #include "gpio.h"
 
 #ifndef FOSC
@@ -39,8 +40,8 @@ class SystemControlBlock {
           "str r1,[r0]\n\t"
           "str r2,[r0]\n\t" : :"r"(&PLLFEED()):"r0","r1","r2");
     }
-
   public:
+    size_t _pll_lock_count;
     /** Set up on-board phase-lock-loop clock multiplier.
     \param M Clock multiplier. Final clock rate will be crystal frequency times this
     number. May be between 1 and 32, but in practice must not exceed 5 with a 12MHz
@@ -48,7 +49,7 @@ class SystemControlBlock {
     */
     static const uint32_t FCCOmin=156'000'000;
     static const uint32_t FCCOmax=320'000'000;
-    static void init_pll() {
+    void init_pll() {
       //Figure out N, exponent for PLL divider value, P=2^N. Intermediate frequency FCCO will be
       //FOSC*M*2*P=FOSC*M*2*2^N, and must be between 156MHz and 320MHz. This selects the lowest
       //N which satisfies the frequency constraint
@@ -60,25 +61,28 @@ class SystemControlBlock {
       feed();
 
       // Enable the PLL */
+      _pll_lock_count=0;
       PLLCON()=0x1;
       feed();
 
       // Wait for the PLL to lock to set frequency
-      while(!locked()) {}
+      while(!locked()) {
+        _pll_lock_count++;
+      }
 
       // Connect the PLL as the clock source. This doesn't actually work :(
-      //PLLCON()=0x3;
-      //feed();
+      PLLCON()=0x3;
+      feed();
     }
     PLLDriver() {
       init_pll();
     }
-    static uint32_t multiplier() {return (PLLSTAT() & 0x1F)+1;}
-    static uint32_t divider()    {return 1<<((PLLSTAT() >> 5) & 0x03);}
-    static bool enabled()        {return (PLLSTAT() >> 8) & 0x01;}
-    static bool connected()      {return (PLLSTAT() >> 9) & 0x01;}
-    static bool locked()         {return (PLLSTAT() >>10) & 0x01;}
-    static uint32_t FCCO()       {return FOSC*2*multiplier()*divider();}
+    uint32_t multiplier() {return (PLLSTAT() & 0x1F)+1;}
+    uint32_t divider()    {return 1<<((PLLSTAT() >> 5) & 0x03);}
+    bool enabled()        {return (PLLSTAT() >> 8) & 0x01;}
+    bool connected()      {return (PLLSTAT() >> 9) & 0x01;}
+    bool locked()         {return (PLLSTAT() >>10) & 0x01;}
+    uint32_t FCCO()       {return FOSC*2*multiplier()*divider();}
   };
 
   PLLDriver PLL;
@@ -128,8 +132,8 @@ public:
   }
   uint32_t PCLK() {return _PCLK;}
   uint32_t CCLK() {return _CCLK;}
+  size_t pll_lock_count() {return PLL._pll_lock_count;}
 };
-
 
 inline SystemControlBlock SCB;
 #endif
