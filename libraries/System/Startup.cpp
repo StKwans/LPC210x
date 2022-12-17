@@ -1,5 +1,4 @@
-#include "scb.h"
-#include "vic.h"
+#include "irq.h"
 #include "hardware_stack.h"
 
 /* Configuration requirements and constraints. I would dearly like the 
@@ -83,23 +82,22 @@ typedef void (*fvoid)(void);
 extern fvoid ctors_start[];
 extern fvoid ctors_end[];
 
-//Handlers for various exceptions, defined as weak so that they may be replaced
-//by user code. These default handlers just go into infinite loops. Reset and
-//IRQ are handled by real (strong) functions, as they do the right thing and
-//it doesn't make sense for user code to replace them.  
-void __attribute__ ((weak,noreturn)) Undef_Handler(void) {for(;;);}
-void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) SWI_Handler(void);
-void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) PAbt_Handler(void);
-void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) DAbt_Handler(void);
-void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) FIQ_Handler(void);
-/**This fills the vtable slots of a class where the method is abstract. Why not 
+// Declarations for exception handlers. Definitions are below reset handler
+// so that they appear after it in binary.
+
+extern "C" void Undef_Handler(void);
+extern "C" void SWI_Handler(void);
+extern "C" void PAbt_Handler(void);
+extern "C" void DAbt_Handler(void);
+extern "C" void FIQ_Handler(void);
+/**This fills the vtable slots of a class where the method is abstract. Why not
 just zero? That would cause a spontaneous reset on an ARM processor, and "Thou
-shalt not follow the NULL pointer, for chaos and madness await thee at its 
+shalt not follow the NULL pointer, for chaos and madness await thee at its
 end." But, if you call an abstract method, you get what you deserve.
-Defined as weak so that if you want to write a function that beats the 
+Defined as weak so that if you want to write a function that beats the
 programmer about the head when called, you can. Defined as extern C
 because the compiler generates references to this exact function name. */
-extern "C" void __attribute__ ((weak,alias("_Z13Undef_Handlerv"))) __cxa_pure_virtual();
+extern "C" void __cxa_pure_virtual();
 
 //Sketch main routines. We actually put the symbol weakness to work here - we
 //expect to replace these functions.
@@ -108,10 +106,10 @@ void __attribute__ ((weak)) loop(void) {}
 
 //No setup code because stack isn't available yet
 //No cleanup code because function won't return (what would it return to?)
-void __attribute__ ((naked))            Reset_Handler(void); 
+extern "C" void __attribute__ ((naked))            Reset_Handler(void);
 
-void __attribute__ ((naked)) 
-__attribute__ ((section(".vectors"))) 
+extern "C" void __attribute__ ((naked))
+__attribute__ ((section(".vectors")))
 vectorg(void) {
   asm("ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
@@ -121,14 +119,14 @@ vectorg(void) {
       ".word 0xb8a06f58\n\t" //NXP checksum, constant as long as the other 7 instructions in first 8 are constant
       "ldr pc,[pc,#24]\n\t"
       "ldr pc,[pc,#24]\n\t"
-      ".word _Z13Reset_Handlerv\n\t"   //Startup code location
-      ".word _Z13Undef_Handlerv\n\t"   //Undef
-      ".word _Z11SWI_Handlerv\n\t"   //SWI
-      ".word _Z12PAbt_Handlerv\n\t"   //PAbt
-      ".word _Z12DAbt_Handlerv\n\t"   //DAbt
+      ".word Reset_Handler\n\t"   //Startup code location
+      ".word Undef_Handler\n\t"   //Undef
+      ".word SWI_Handler\n\t"   //SWI
+      ".word PAbt_Handler\n\t"   //PAbt
+      ".word DAbt_Handler\n\t"   //DAbt
       ".word 0\n\t"               //Reserved (hole in vector table above)
       ".word IRQ_Wrapper\n\t"     //IRQ (wrapper so that normal C functions can be installed in VIC)
-      ".word _Z11FIQ_Handlerv"); //FIQ
+      ".word FIQ_Handler"); //FIQ
 }
 
 //These two routines ABSOLUTELY MUST be inlined. Without the __attribute__((always_inline)) we don't get inlined at optimization level -O0
@@ -200,3 +198,24 @@ void Reset_Handler() {
 //Directly call user's loop();
   for(;;) loop();
 }
+
+//Handlers for various exceptions, defined as weak so that they may be replaced
+//by user code. These default handlers just go into infinite loops. Reset and
+//IRQ are handled by real (strong) functions, as they do the right thing and
+//it doesn't make sense for user code to replace them.
+void __attribute__ ((weak,noreturn)) Undef_Handler(void) {for(;;);}
+void __attribute__ ((weak,alias("Undef_Handler"))) SWI_Handler(void);
+void __attribute__ ((weak,alias("Undef_Handler"))) PAbt_Handler(void);
+void __attribute__ ((weak,alias("Undef_Handler"))) DAbt_Handler(void);
+void __attribute__ ((weak,alias("Undef_Handler"))) FIQ_Handler(void);
+/**This fills the vtable slots of a class where the method is abstract. Why not
+just zero? That would cause a spontaneous reset on an ARM processor, and "Thou
+shalt not follow the NULL pointer, for chaos and madness await thee at its
+end." But, if you call an abstract method, you get what you deserve.
+Defined as weak so that if you want to write a function that beats the
+programmer about the head when called, you can. Defined as extern C
+because the compiler generates references to this exact function name. */
+void __attribute__ ((weak,alias("Undef_Handler"))) __cxa_pure_virtual();
+
+#include "scb.h"
+#include "vic.h"
