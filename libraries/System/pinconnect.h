@@ -2,8 +2,11 @@
 // Created by jeppesen on 12/6/22.
 //
 
-#ifndef LPC210X_PINCONNECT_H
-#define LPC210X_PINCONNECT_H
+#ifndef pinconnect_h
+#define pinconnect_h
+
+#include <cinttypes>
+#include <cstddef>
 
 class PinConnectDriver {
 private:
@@ -24,4 +27,4 @@ public:
 
 inline PinConnectDriver PinConnect;
 
-#endif //LPC210X_PINCONNECT_H
+#endif
