@@ -24,10 +24,10 @@ protected:
   static volatile uint32_t& TCTCR()               {return (*(volatile uint32_t*)(TMR0_BASE_ADDR+(port)*TMR_BASE_DELTA + 0x70));}
 public:
   Timer32() {}
-  void stop_and_reset() {
+  static void stop_and_reset() {
     TTCR() = (1 << 1);       // Reset counter and prescaler and halt timer
   }
-  void start() {
+  static void start() {
     TTCR() = (1 << 0); // start timer
   }
   static uint32_t delta(uint32_t a, uint32_t b, uint32_t limit) {
@@ -44,6 +44,9 @@ public:
     }
     return result;
   };
+  static uint32_t count() {
+    return TTC();
+  }
 };
 
 template<int port>
@@ -52,13 +55,13 @@ private:
   uint32_t timerSec;
   uint32_t timerInterval;
 public:
-  KwanTimer(uint32_t LtimerSec=60):timerSec(LtimerSec) {
+  KwanTimer(uint32_t LtimerSec=60):Timer32<port>(),timerSec(LtimerSec) {
     //Set up Timer0 to count up to timerSec seconds at full speed, then auto reset with no interrupt.
     //This is needed for the accurate delay function and the task manager
     Timer32<port>::stop_and_reset();
     Timer32<port>::TCTCR() = 0; //Drive timer from PCLK, not external pin
     Timer32<port>::TMCR() = (1 << 1);     // On MR0, reset but no int.
-    timerInterval = SCB.PCLK * timerSec;
+    timerInterval = SCB.PCLK() * timerSec;
     Timer32<port>::TMR(0) = timerInterval-1;  //Reset when timer equals PCLK rate, effectively once per timerSec seconds
     Timer32<port>::TPR() = 0;  //No prescale, 1 timer tick equals 1 PCLK tick
     Timer32<port>::start();
@@ -79,7 +82,7 @@ public:
       ms-=1000*timerSec;
     }
     if(ms==0) return;
-    unsigned int TC1=TC0+ms*(SCB.PCLK/1000);
+    unsigned int TC1=TC0+ms*(SCB.PCLK()/1000);
     if(TC1>timerInterval) {
       //Do this while we are waiting
       TC1-=timerInterval;
