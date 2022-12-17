@@ -83,7 +83,7 @@ THUMB_IW = -mthumb-interwork
 # Optimization level, can be [0, 1, 2, 3, s]. 
 # 0 = turn off optimization. s = optimize for size.
 # (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
-OPT = -Og -fomit-frame-pointer
+OPT = -Os -fomit-frame-pointer
 
 ## Using the Atmel AT91_lib produces warning with
 ## the default warning-levels. 
@@ -228,6 +228,7 @@ SIZE = $(ABI)-size
 NM = $(ABI)-nm
 REMOVE = rm -f
 COPY = cp
+GPIO_PY = python3 ../libraries/System/gpio.py
 
 # Define Messages
 # English
@@ -332,7 +333,12 @@ gccversion :
 program: $(LPC21ISP_FLASHFILE) $(TARGET).lss sizeafter
 	@echo
 	@echo $(MSG_LPC21_RESETREMINDER)
+	$(GPIO_PY) -b -r
+	sleep 1
+	$(GPIO_PY) -b -R
+	sleep 1
 	$(LPC21ISP) $(LPC21ISP_OPTIONS) $(LPC21ISP_DEBUG) $(LPC21ISP_FLASHFILE) $(LPC21ISP_PORT) $(LPC21ISP_BAUD) $(LPC21ISP_XTAL)
+	$(GPIO_PY) -b -R -q
 
 
 # Create final output file (.hex) from ELF output file.
@@ -355,7 +361,7 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJDUMP) -h $< > $@
 	$(OBJDUMP) -S -j .text $< | c++filt >> $@
 	$(OBJDUMP) -s -j .vtable -j .rodata -j .ctors  -j .data $< >> $@
-	$(OBJDUMP) -t $< | grep ^[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f] | sort >> $@
+	$(OBJDUMP) -t $< | grep ^[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f] | c++filt | sort >> $@
 
 # Link: create ELF output file from object files.
 .SECONDARY : $(TARGET).elf
