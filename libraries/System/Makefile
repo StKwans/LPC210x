@@ -200,7 +200,7 @@ LDFLAGS += -T$(LD_SCRIPT)
 #
 # Settings and variables:
 #LPC21ISP = lpc21isp
-LPC21ISP = lpc21isp
+LPC21ISP = python3 ../libraries/System/lpc21isp.py
 LPC21ISP_PORT = /dev/ttyS0
 LPC21ISP_BAUD = 38400
 LPC21ISP_XTAL = 12000
@@ -228,7 +228,7 @@ SIZE = $(ABI)-size
 NM = $(ABI)-nm
 REMOVE = rm -f
 COPY = cp
-GPIO_PY = python3 ../libraries/System/gpio.py
+
 
 # Define Messages
 # English
@@ -333,12 +333,12 @@ gccversion :
 program: $(LPC21ISP_FLASHFILE) $(TARGET).lss sizeafter
 	@echo
 	@echo $(MSG_LPC21_RESETREMINDER)
-	$(GPIO_PY) -b -r
-	sleep 1
-	$(GPIO_PY) -b -R
-	sleep 1
 	$(LPC21ISP) $(LPC21ISP_OPTIONS) $(LPC21ISP_DEBUG) $(LPC21ISP_FLASHFILE) $(LPC21ISP_PORT) $(LPC21ISP_BAUD) $(LPC21ISP_XTAL)
-	$(GPIO_PY) -b -R -q
+
+
+# Reboot the device and bring up putty
+boot: program
+	putty -load LPC2102
 
 
 # Create final output file (.hex) from ELF output file.
