@@ -71,6 +71,12 @@ SECTIONS
     }
     >ROM
 
+    rom_start = ORIGIN(ROM);
+    rom_end = ORIGIN(ROM)+LENGTH(ROM);
+
+    iap_start = ORIGIN(NXP_BOOT);
+    iap_end = ORIGIN(NXP_BOOT)+LENGTH(NXP_BOOT);
+
 /*The program never returns control to an external system, therefore
 global destructors are never called. */
 /*
@@ -128,6 +134,7 @@ in rom but relocated to ram.  */
     > RAM
 
     /* Physical end of RAM */
+    ram_start = ORIGIN(RAM);
     ram_end = ORIGIN(RAM)+LENGTH(RAM);
 
     /* Stabs debugging sections.  */

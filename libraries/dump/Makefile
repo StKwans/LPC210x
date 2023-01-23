@@ -1,5 +1,4 @@
 LIBMAKE+=../libraries/dump/Makefile
-CPPSRC+=../libraries/dump/dump.cpp
 EXTRAINCDIRS+=../libraries/dump/
 
 ZPAQDIR=../libraries/System
@@ -15,7 +14,7 @@ ALLTAR = $(call uniq,$(ALLSRC)) $(call uniq,$(INCDEF)) $(call uniq,$(LD_SCRIPT))
 
 CPIO_EXT = .cpio
 ARCHIVE_EXT = tar
-COMPRESS_EXT = max.zpaq
+COMPRESS_EXT = gz
 
 TARBALL = $(TARGET).$(ARCHIVE_EXT).$(COMPRESS_EXT)
 
@@ -77,5 +76,5 @@ test_archive: $(TEST_ARCHIVE)
 $(TARBALL).o: $(TARBALL)
 	$(OBJCOPY) -I binary -O elf32-littlearm $(TARBALL) $(TARBALL).o --rename-section .data=.source --redefine-sym _binary_`echo $(TARBALL) | sed -e 's/\./_/g'`_start=source_start --redefine-sym _binary_`echo $(TARBALL) | sed -e 's/\./_/g'`_end=source_end -B arm
 
-EXTRAOBJ += $(TARBALL).o
+#EXTRAOBJ += $(TARBALL).o
 
