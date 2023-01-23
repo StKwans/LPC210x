@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include "scb.h"
+#include "pinconnect.h"
 
 template<int port>
 class Timer32 {
@@ -22,6 +23,9 @@ protected:
   static volatile uint32_t& TCR(uint32_t channel) {return (*(volatile uint32_t*)(TMR0_BASE_ADDR+(port)*TMR_BASE_DELTA + 0x2C+(channel)*4));}
   static volatile uint32_t& TEMR()                {return (*(volatile uint32_t*)(TMR0_BASE_ADDR+(port)*TMR_BASE_DELTA + 0x3C));}
   static volatile uint32_t& TCTCR()               {return (*(volatile uint32_t*)(TMR0_BASE_ADDR+(port)*TMR_BASE_DELTA + 0x70));}
+  static const constexpr uint8_t pin_map_p[8]={2,4,6,255,10,11,17,18};
+  static const uint8_t pin_mode_timer=2;
+  static const uint8_t pin_mode_gpio=0;
 public:
   Timer32() {}
   static void stop_and_reset() {
@@ -47,6 +51,26 @@ public:
   static uint32_t count() {
     return TTC();
   }
+  static void set_capture(uint32_t channel, bool rising=true, bool falling=false, bool intr=false, bool grab_pin=true) {
+    if(grab_pin) {
+      PinConnect.set_pin(pin_map_p[port * 4 + channel], pin_mode_timer);
+    }
+    uint32_t mask=7<<(channel*3);
+    uint32_t value=((rising?1:0)|(falling?2:0)|(intr?4:0))<<(channel*3);
+    TCCR()=(TCCR() &~mask)|value;
+  }
+  static void release_capture(uint32_t channel, bool release_pin=true) {
+    uint32_t mask=7<<(channel*3);
+    uint32_t value=0;
+    TCCR()=(TCCR() &~mask)|value;
+    if(release_pin) {
+      PinConnect.set_pin(pin_map_p[port*4+channel],pin_mode_gpio);
+    }
+  }
+  static uint32_t read_capture(uint32_t channel) {
+    return TCR(channel);
+  }
+
 };
 
 template<int port>
@@ -95,11 +119,11 @@ public:
 
 };
 
-KwanTimer<0> Timer0;
-Timer32<1> Timer1;
+Timer32<0> Timer0;
+KwanTimer<1> Timer1;
 
 inline void delay(uint32_t ms) {
-  Timer0.delay(ms);
+  Timer1.delay(ms);
 }
 
 #endif
